@@ -1,104 +1,462 @@
-2025-08-30 18:38:27,349 - model_gateway - INFO - Model Gateway logging initialized.
-2025-08-30 18:38:27,352 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-08-30 18:38:27,354 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
-/home/yosh/repos/AgenticRAG/services/model-gateway/app.py:198: DeprecationWarning: 
+2025-09-04 11:52:59,352 - model_gateway - INFO - Model Gateway logging initialized.
+2025-09-04 11:52:59,355 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 11:52:59,356 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+/home/yosh/repos/AgenticRAGQCode/services/model-gateway/app.py:289: DeprecationWarning: 
         on_event is deprecated, use lifespan event handlers instead.
 
         Read more about it in the
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
-2025-08-30 18:38:27,371 - model_gateway - INFO - Starting Model Gateway application...
-2025-08-30 18:38:27,371 - asyncio - DEBUG - Using selector: EpollSelector
-INFO:     Started server process [97652]
+2025-09-04 11:52:59,373 - model_gateway - INFO - Starting Model Gateway application...
+2025-09-04 11:52:59,374 - asyncio - DEBUG - Using selector: EpollSelector
+INFO:     Started server process [34135]
 INFO:     Waiting for application startup.
-2025-08-30 18:38:27,374 - model_gateway - INFO - Model Gateway service is starting up...
-2025-08-30 18:38:27,374 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-08-30 18:38:27,375 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
-2025-08-30 18:38:27,393 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=10.0 socket_options=None
-2025-08-30 18:38:27,395 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd3baa06270>
-2025-08-30 18:38:27,396 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-08-30 18:38:27,396 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-08-30 18:38:27,396 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-08-30 18:38:27,396 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-08-30 18:38:27,396 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-08-30 18:38:27,396 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 500, b'Internal Server Error', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Sat, 30 Aug 2025 23:38:27 GMT'), (b'Content-Length', b'94')])
-2025-08-30 18:38:27,396 - httpx - INFO - HTTP Request: GET http://localhost:11434/api/tags "HTTP/1.1 500 Internal Server Error"
-2025-08-30 18:38:27,397 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-08-30 18:38:27,397 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-08-30 18:38:27,397 - httpcore.http11 - DEBUG - response_closed.started
-2025-08-30 18:38:27,397 - httpcore.http11 - DEBUG - response_closed.complete
-2025-08-30 18:38:27,397 - httpcore.connection - DEBUG - close.started
-2025-08-30 18:38:27,397 - httpcore.connection - DEBUG - close.complete
-2025-08-30 18:38:27,397 - model_gateway - ERROR - Failed to connect to Ollama API on startup: Server error '500 Internal Server Error' for url 'http://localhost:11434/api/tags'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+2025-09-04 11:52:59,377 - model_gateway - INFO - Model Gateway service is starting up...
+2025-09-04 11:52:59,378 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 11:52:59,378 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+2025-09-04 11:52:59,396 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=10.0 socket_options=None
+2025-09-04 11:52:59,399 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 11:52:59,399 - model_gateway - ERROR - Failed to connect to Ollama API on startup: All connection attempts failed
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8070 (Press CTRL+C to quit)
-2025-08-30 18:38:29,185 - model_gateway - DEBUG - Health check endpoint called.
-2025-08-30 18:38:29,185 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-08-30 18:38:29,186 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
-2025-08-30 18:38:29,200 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=5.0 socket_options=None
-2025-08-30 18:38:29,201 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd3baa54690>
-2025-08-30 18:38:29,201 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-08-30 18:38:29,202 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-08-30 18:38:29,202 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-08-30 18:38:29,202 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-08-30 18:38:29,202 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-08-30 18:38:29,202 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'text/plain; charset=utf-8'), (b'Date', b'Sat, 30 Aug 2025 23:38:29 GMT'), (b'Content-Length', b'17')])
-2025-08-30 18:38:29,202 - httpx - INFO - HTTP Request: GET http://localhost:11434/ "HTTP/1.1 200 OK"
-2025-08-30 18:38:29,202 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-08-30 18:38:29,202 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-08-30 18:38:29,202 - httpcore.http11 - DEBUG - response_closed.started
-2025-08-30 18:38:29,202 - httpcore.http11 - DEBUG - response_closed.complete
-2025-08-30 18:38:29,202 - model_gateway - INFO - Health check: Model Gateway and Ollama connection OK.
-/home/yosh/repos/AgenticRAG/services/model-gateway/app.py:219: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  return {"status": "healthy", "ollama_connected": True, "timestamp": datetime.utcnow().isoformat()}
-2025-08-30 18:38:29,202 - httpcore.connection - DEBUG - close.started
-2025-08-30 18:38:29,202 - httpcore.connection - DEBUG - close.complete
-INFO:     127.0.0.1:58888 - "GET /health HTTP/1.1" 200 OK
-2025-08-30 18:38:36,470 - model_gateway - INFO - Received generation request for model 'qwen3:8b'
-2025-08-30 18:38:36,470 - model_gateway - DEBUG - Request details: prompt='What is the capital of France?...', stream=False, params={}
-2025-08-30 18:38:36,470 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-08-30 18:38:36,471 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
-2025-08-30 18:38:36,485 - model_gateway - DEBUG - Forwarding request to Ollama: {'model': 'qwen3:8b', 'prompt': 'What is the capital of France?', 'stream': False, 'options': {}}
-2025-08-30 18:38:36,486 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=300.0 socket_options=None
-2025-08-30 18:38:36,487 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd3baa57610>
-2025-08-30 18:38:36,487 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
-2025-08-30 18:38:36,487 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-08-30 18:38:36,487 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
-2025-08-30 18:38:36,488 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-08-30 18:38:36,488 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
-2025-08-30 18:38:36,488 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 404, b'Not Found', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Sat, 30 Aug 2025 23:38:36 GMT'), (b'Content-Length', b'38')])
-2025-08-30 18:38:36,488 - httpx - INFO - HTTP Request: POST http://localhost:11434/api/generate "HTTP/1.1 404 Not Found"
-2025-08-30 18:38:36,488 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
-2025-08-30 18:38:36,488 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-08-30 18:38:36,488 - httpcore.http11 - DEBUG - response_closed.started
-2025-08-30 18:38:36,488 - httpcore.http11 - DEBUG - response_closed.complete
-2025-08-30 18:38:36,488 - model_gateway - DEBUG - Received response from Ollama: Status 404
-2025-08-30 18:38:36,489 - httpcore.connection - DEBUG - close.started
-2025-08-30 18:38:36,489 - httpcore.connection - DEBUG - close.complete
-2025-08-30 18:38:36,489 - model_gateway - ERROR - Ollama returned error 404: {"error":"model 'qwen3:8b' not found"}
-INFO:     127.0.0.1:59440 - "POST /generate HTTP/1.1" 404 Not Found
-2025-08-30 18:39:47,551 - model_gateway - INFO - Received generation request for model 'qwen3:8b'
-2025-08-30 18:39:47,551 - model_gateway - DEBUG - Request details: prompt='What is the capital of France?...', stream=False, params={}
-2025-08-30 18:39:47,551 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-08-30 18:39:47,551 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
-2025-08-30 18:39:47,566 - model_gateway - DEBUG - Forwarding request to Ollama: {'model': 'qwen3:8b', 'prompt': 'What is the capital of France?', 'stream': False, 'options': {}}
-2025-08-30 18:39:47,566 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=300.0 socket_options=None
-2025-08-30 18:39:47,567 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd3ba011940>
-2025-08-30 18:39:47,567 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
-2025-08-30 18:39:47,568 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-08-30 18:39:47,568 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
-2025-08-30 18:39:47,568 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-08-30 18:39:47,568 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
-2025-08-30 18:40:02,639 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=utf-8'), (b'Date', b'Sat, 30 Aug 2025 23:40:02 GMT'), (b'Content-Length', b'1962')])
-2025-08-30 18:40:02,639 - httpx - INFO - HTTP Request: POST http://localhost:11434/api/generate "HTTP/1.1 200 OK"
-2025-08-30 18:40:02,640 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
-2025-08-30 18:40:02,640 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-08-30 18:40:02,640 - httpcore.http11 - DEBUG - response_closed.started
-2025-08-30 18:40:02,640 - httpcore.http11 - DEBUG - response_closed.complete
-2025-08-30 18:40:02,640 - model_gateway - DEBUG - Received response from Ollama: Status 200
-2025-08-30 18:40:02,640 - model_gateway - INFO - Generation completed successfully for model 'qwen3:8b'.
-2025-08-30 18:40:02,641 - httpcore.connection - DEBUG - close.started
-2025-08-30 18:40:02,641 - httpcore.connection - DEBUG - close.complete
-INFO:     127.0.0.1:41168 - "POST /generate HTTP/1.1" 200 OK
+2025-09-04 11:53:05,180 - model_gateway - DEBUG - Health check endpoint called.
+2025-09-04 11:53:05,181 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 11:53:05,181 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+2025-09-04 11:53:05,196 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=5.0 socket_options=None
+2025-09-04 11:53:05,197 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd94b4e4050>
+2025-09-04 11:53:05,197 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-09-04 11:53:05,198 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-09-04 11:53:05,198 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-09-04 11:53:05,198 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-09-04 11:53:05,198 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-09-04 11:53:05,198 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'text/plain; charset=utf-8'), (b'Date', b'Thu, 04 Sep 2025 16:53:05 GMT'), (b'Content-Length', b'17')])
+2025-09-04 11:53:05,198 - httpx - INFO - HTTP Request: GET http://localhost:11434/ "HTTP/1.1 200 OK"
+2025-09-04 11:53:05,198 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-09-04 11:53:05,198 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-09-04 11:53:05,199 - httpcore.http11 - DEBUG - response_closed.started
+2025-09-04 11:53:05,199 - httpcore.http11 - DEBUG - response_closed.complete
+2025-09-04 11:53:05,199 - model_gateway - INFO - Health check: Model Gateway and Ollama connection OK.
+2025-09-04 11:53:05,199 - httpcore.connection - DEBUG - close.started
+2025-09-04 11:53:05,199 - httpcore.connection - DEBUG - close.complete
+INFO:     127.0.0.1:58210 - "GET /health HTTP/1.1" 200 OK
+2025-09-04 12:07:19,951 - model_gateway - DEBUG - Health check endpoint called.
+2025-09-04 12:07:19,953 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 12:07:19,953 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+2025-09-04 12:07:19,969 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=5.0 socket_options=None
+2025-09-04 12:07:19,971 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd94b4e2e90>
+2025-09-04 12:07:19,971 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-09-04 12:07:19,971 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-09-04 12:07:19,971 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-09-04 12:07:19,971 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-09-04 12:07:19,971 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-09-04 12:07:19,982 - httpcore.http11 - DEBUG - receive_response_headers.failed exception=RemoteProtocolError('Server disconnected without sending a response.')
+2025-09-04 12:07:19,982 - httpcore.http11 - DEBUG - response_closed.started
+2025-09-04 12:07:19,982 - httpcore.http11 - DEBUG - response_closed.complete
+2025-09-04 12:07:19,982 - model_gateway - ERROR - Health check failed: Error connecting to Ollama: Server disconnected without sending a response.
+INFO:     127.0.0.1:51702 - "GET /health HTTP/1.1" 200 OK
+2025-09-04 12:07:20,067 - model_gateway - DEBUG - Health check endpoint called.
+2025-09-04 12:07:20,067 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 12:07:20,067 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+2025-09-04 12:07:20,081 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=5.0 socket_options=None
+2025-09-04 12:07:20,082 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:20,083 - model_gateway - ERROR - Health check failed: Error connecting to Ollama: All connection attempts failed
+INFO:     127.0.0.1:51704 - "GET /health HTTP/1.1" 200 OK
+2025-09-04 12:07:27,853 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,853 - model_gateway - DEBUG - Request details: prompt='Test text 2...'
+2025-09-04 12:07:27,854 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,854 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,854 - model_gateway - DEBUG - Request details: prompt='Test text 1...'
+2025-09-04 12:07:27,860 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,860 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,860 - model_gateway - DEBUG - Request details: prompt='Test text 3...'
+2025-09-04 12:07:27,861 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,861 - model_gateway - DEBUG - Request details: prompt='Test text 4...'
+2025-09-04 12:07:27,861 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,861 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,862 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,862 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,863 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51710 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,863 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,863 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,863 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51716 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,863 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,863 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,863 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51724 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,864 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,864 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,864 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51726 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,879 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,879 - model_gateway - DEBUG - Request details: prompt='Throughput test text 2...'
+2025-09-04 12:07:27,880 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,880 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,880 - model_gateway - DEBUG - Request details: prompt='Throughput test text 0...'
+2025-09-04 12:07:27,880 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,880 - model_gateway - DEBUG - Request details: prompt='Throughput test text 3...'
+2025-09-04 12:07:27,881 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,881 - model_gateway - DEBUG - Request details: prompt='Throughput test text 1...'
+2025-09-04 12:07:27,881 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,881 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,881 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,881 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,881 - model_gateway - DEBUG - Request details: prompt='Throughput test text 6...'
+2025-09-04 12:07:27,882 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,882 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,882 - model_gateway - DEBUG - Request details: prompt='Throughput test text 4...'
+2025-09-04 12:07:27,883 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,883 - model_gateway - DEBUG - Request details: prompt='Throughput test text 5...'
+2025-09-04 12:07:27,883 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,883 - model_gateway - DEBUG - Request details: prompt='Throughput test text 8...'
+2025-09-04 12:07:27,883 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,883 - model_gateway - DEBUG - Request details: prompt='Throughput test text 7...'
+2025-09-04 12:07:27,884 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,884 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,884 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,884 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,884 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,884 - model_gateway - DEBUG - Request details: prompt='Throughput test text 9...'
+2025-09-04 12:07:27,885 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,887 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,887 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,887 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51736 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,887 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,887 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,887 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51756 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,887 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,887 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,887 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51762 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,888 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,888 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,888 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51766 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,888 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,888 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,888 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51744 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,888 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,888 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,888 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51812 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,889 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,889 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,889 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51798 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,889 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,889 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,889 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51814 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,889 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,889 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,889 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51782 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,889 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,889 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,889 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51830 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,915 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,915 - model_gateway - DEBUG - Request details: prompt='Concurrent test 4...'
+2025-09-04 12:07:27,916 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,916 - model_gateway - DEBUG - Request details: prompt='Concurrent test 2...'
+2025-09-04 12:07:27,916 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,916 - model_gateway - DEBUG - Request details: prompt='Concurrent test 3...'
+2025-09-04 12:07:27,916 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,916 - model_gateway - DEBUG - Request details: prompt='Concurrent test 5...'
+2025-09-04 12:07:27,916 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,917 - model_gateway - DEBUG - Request details: prompt='Concurrent test 0...'
+2025-09-04 12:07:27,917 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,917 - model_gateway - DEBUG - Request details: prompt='Concurrent test 8...'
+2025-09-04 12:07:27,917 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,917 - model_gateway - DEBUG - Request details: prompt='Concurrent test 6...'
+2025-09-04 12:07:27,917 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,917 - model_gateway - DEBUG - Request details: prompt='Concurrent test 7...'
+2025-09-04 12:07:27,917 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,917 - model_gateway - DEBUG - Request details: prompt='Concurrent test 9...'
+2025-09-04 12:07:27,918 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,918 - model_gateway - DEBUG - Request details: prompt='Concurrent test 11...'
+2025-09-04 12:07:27,918 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,918 - model_gateway - DEBUG - Request details: prompt='Concurrent test 12...'
+2025-09-04 12:07:27,918 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,918 - model_gateway - DEBUG - Request details: prompt='Concurrent test 1...'
+2025-09-04 12:07:27,919 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,919 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,919 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,919 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,919 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,919 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,919 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,920 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,920 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,920 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,920 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,920 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,921 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,921 - model_gateway - DEBUG - Request details: prompt='Concurrent test 10...'
+2025-09-04 12:07:27,922 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,922 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,922 - model_gateway - DEBUG - Request details: prompt='Concurrent test 14...'
+2025-09-04 12:07:27,922 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,922 - model_gateway - DEBUG - Request details: prompt='Concurrent test 13...'
+2025-09-04 12:07:27,922 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,922 - model_gateway - DEBUG - Request details: prompt='Concurrent test 18...'
+2025-09-04 12:07:27,923 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,923 - model_gateway - DEBUG - Request details: prompt='Concurrent test 17...'
+2025-09-04 12:07:27,923 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,923 - model_gateway - DEBUG - Request details: prompt='Concurrent test 19...'
+2025-09-04 12:07:27,923 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,923 - model_gateway - DEBUG - Request details: prompt='Concurrent test 15...'
+2025-09-04 12:07:27,924 - model_gateway - INFO - Received embedding request for model 'dengcao/Qwen3-Embedding-0.6B:Q8_0'
+2025-09-04 12:07:27,924 - model_gateway - DEBUG - Request details: prompt='Concurrent test 16...'
+2025-09-04 12:07:27,924 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,924 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,924 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,924 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,925 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,925 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,925 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=60.0 socket_options=None
+2025-09-04 12:07:27,929 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,929 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,929 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51862 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,929 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,930 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,930 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51856 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,930 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,930 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,930 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51874 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,930 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,930 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,930 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51878 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,931 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,931 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,931 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51892 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,931 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,931 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,931 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51890 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,931 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,931 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,931 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51922 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,932 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,932 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,932 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51908 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,932 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,932 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,932 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51844 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,932 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,932 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,932 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51948 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,933 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,933 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,933 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51930 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,933 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,933 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,933 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51942 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,933 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,933 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,933 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51964 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,934 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,934 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,934 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51990 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,934 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,934 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,934 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51992 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,934 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,934 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,934 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51980 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,935 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,935 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,935 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:51988 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,935 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,935 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,935 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:52008 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,935 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,935 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,935 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:52000 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:07:27,935 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-09-04 12:07:27,935 - model_gateway - ERROR - Embedding generation error: All connection attempts failed
+2025-09-04 12:07:27,935 - model_gateway - ERROR - Unexpected error during embedding generation: 
+INFO:     127.0.0.1:52002 - "POST /embed HTTP/1.1" 500 Internal Server Error
+2025-09-04 12:09:39,153 - model_gateway - DEBUG - Health check endpoint called.
+2025-09-04 12:09:39,154 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 12:09:39,154 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+2025-09-04 12:09:39,169 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=5.0 socket_options=None
+2025-09-04 12:09:39,170 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd94b4e0910>
+2025-09-04 12:09:39,170 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-09-04 12:09:39,171 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-09-04 12:09:39,171 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-09-04 12:09:39,171 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-09-04 12:09:39,171 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-09-04 12:09:39,171 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'text/plain; charset=utf-8'), (b'Date', b'Thu, 04 Sep 2025 17:09:39 GMT'), (b'Content-Length', b'17')])
+2025-09-04 12:09:39,171 - httpx - INFO - HTTP Request: GET http://localhost:11434/ "HTTP/1.1 200 OK"
+2025-09-04 12:09:39,171 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-09-04 12:09:39,171 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-09-04 12:09:39,171 - httpcore.http11 - DEBUG - response_closed.started
+2025-09-04 12:09:39,171 - httpcore.http11 - DEBUG - response_closed.complete
+2025-09-04 12:09:39,171 - model_gateway - INFO - Health check: Model Gateway and Ollama connection OK.
+2025-09-04 12:09:39,172 - httpcore.connection - DEBUG - close.started
+2025-09-04 12:09:39,172 - httpcore.connection - DEBUG - close.complete
+INFO:     127.0.0.1:58258 - "GET /health HTTP/1.1" 200 OK
+2025-09-04 12:15:28,495 - model_gateway - DEBUG - Health check endpoint called.
+2025-09-04 12:15:28,496 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 12:15:28,496 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+2025-09-04 12:15:28,509 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=5.0 socket_options=None
+2025-09-04 12:15:28,511 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd94a2f10f0>
+2025-09-04 12:15:28,511 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-09-04 12:15:28,511 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-09-04 12:15:28,511 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-09-04 12:15:28,511 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-09-04 12:15:28,511 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-09-04 12:15:28,511 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'text/plain; charset=utf-8'), (b'Date', b'Thu, 04 Sep 2025 17:15:28 GMT'), (b'Content-Length', b'17')])
+2025-09-04 12:15:28,511 - httpx - INFO - HTTP Request: GET http://localhost:11434/ "HTTP/1.1 200 OK"
+2025-09-04 12:15:28,512 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-09-04 12:15:28,512 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-09-04 12:15:28,512 - httpcore.http11 - DEBUG - response_closed.started
+2025-09-04 12:15:28,512 - httpcore.http11 - DEBUG - response_closed.complete
+2025-09-04 12:15:28,512 - model_gateway - INFO - Health check: Model Gateway and Ollama connection OK.
+2025-09-04 12:15:28,512 - httpcore.connection - DEBUG - close.started
+2025-09-04 12:15:28,512 - httpcore.connection - DEBUG - close.complete
+INFO:     127.0.0.1:49998 - "GET /health HTTP/1.1" 200 OK
+2025-09-04 12:59:15,719 - model_gateway - DEBUG - Health check endpoint called.
+2025-09-04 12:59:15,719 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 12:59:15,720 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+2025-09-04 12:59:15,736 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=5.0 socket_options=None
+2025-09-04 12:59:15,737 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd94a2f1e00>
+2025-09-04 12:59:15,737 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-09-04 12:59:15,737 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-09-04 12:59:15,737 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-09-04 12:59:15,737 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-09-04 12:59:15,737 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-09-04 12:59:15,737 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'text/plain; charset=utf-8'), (b'Date', b'Thu, 04 Sep 2025 17:59:15 GMT'), (b'Content-Length', b'17')])
+2025-09-04 12:59:15,738 - httpx - INFO - HTTP Request: GET http://localhost:11434/ "HTTP/1.1 200 OK"
+2025-09-04 12:59:15,738 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-09-04 12:59:15,738 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-09-04 12:59:15,738 - httpcore.http11 - DEBUG - response_closed.started
+2025-09-04 12:59:15,738 - httpcore.http11 - DEBUG - response_closed.complete
+2025-09-04 12:59:15,738 - model_gateway - INFO - Health check: Model Gateway and Ollama connection OK.
+2025-09-04 12:59:15,738 - httpcore.connection - DEBUG - close.started
+2025-09-04 12:59:15,738 - httpcore.connection - DEBUG - close.complete
+INFO:     127.0.0.1:50818 - "GET /health HTTP/1.1" 200 OK
+2025-09-04 13:07:16,041 - model_gateway - DEBUG - Health check endpoint called.
+2025-09-04 13:07:16,042 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 13:07:16,042 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+2025-09-04 13:07:16,057 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=5.0 socket_options=None
+2025-09-04 13:07:16,058 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd94b4bdb50>
+2025-09-04 13:07:16,059 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-09-04 13:07:16,059 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-09-04 13:07:16,059 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-09-04 13:07:16,059 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-09-04 13:07:16,059 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-09-04 13:07:16,059 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'text/plain; charset=utf-8'), (b'Date', b'Thu, 04 Sep 2025 18:07:16 GMT'), (b'Content-Length', b'17')])
+2025-09-04 13:07:16,059 - httpx - INFO - HTTP Request: GET http://localhost:11434/ "HTTP/1.1 200 OK"
+2025-09-04 13:07:16,059 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-09-04 13:07:16,059 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-09-04 13:07:16,059 - httpcore.http11 - DEBUG - response_closed.started
+2025-09-04 13:07:16,060 - httpcore.http11 - DEBUG - response_closed.complete
+2025-09-04 13:07:16,060 - model_gateway - INFO - Health check: Model Gateway and Ollama connection OK.
+2025-09-04 13:07:16,060 - httpcore.connection - DEBUG - close.started
+2025-09-04 13:07:16,060 - httpcore.connection - DEBUG - close.complete
+INFO:     127.0.0.1:55884 - "GET /health HTTP/1.1" 200 OK
+2025-09-04 13:10:06,233 - model_gateway - DEBUG - Health check endpoint called.
+2025-09-04 13:10:06,233 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 13:10:06,233 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+2025-09-04 13:10:06,248 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=5.0 socket_options=None
+2025-09-04 13:10:06,249 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd94a24ee00>
+2025-09-04 13:10:06,249 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-09-04 13:10:06,249 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-09-04 13:10:06,249 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-09-04 13:10:06,249 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-09-04 13:10:06,249 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-09-04 13:10:06,249 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'text/plain; charset=utf-8'), (b'Date', b'Thu, 04 Sep 2025 18:10:06 GMT'), (b'Content-Length', b'17')])
+2025-09-04 13:10:06,250 - httpx - INFO - HTTP Request: GET http://localhost:11434/ "HTTP/1.1 200 OK"
+2025-09-04 13:10:06,250 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-09-04 13:10:06,250 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-09-04 13:10:06,250 - httpcore.http11 - DEBUG - response_closed.started
+2025-09-04 13:10:06,250 - httpcore.http11 - DEBUG - response_closed.complete
+2025-09-04 13:10:06,250 - model_gateway - INFO - Health check: Model Gateway and Ollama connection OK.
+2025-09-04 13:10:06,250 - httpcore.connection - DEBUG - close.started
+2025-09-04 13:10:06,250 - httpcore.connection - DEBUG - close.complete
+INFO:     127.0.0.1:57992 - "GET /health HTTP/1.1" 200 OK
+2025-09-04 13:13:34,274 - model_gateway - DEBUG - Health check endpoint called.
+2025-09-04 13:13:34,274 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 13:13:34,275 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+2025-09-04 13:13:34,289 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=5.0 socket_options=None
+2025-09-04 13:13:34,290 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd94a24fbd0>
+2025-09-04 13:13:34,291 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-09-04 13:13:34,291 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-09-04 13:13:34,291 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-09-04 13:13:34,291 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-09-04 13:13:34,291 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-09-04 13:13:34,291 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'text/plain; charset=utf-8'), (b'Date', b'Thu, 04 Sep 2025 18:13:34 GMT'), (b'Content-Length', b'17')])
+2025-09-04 13:13:34,291 - httpx - INFO - HTTP Request: GET http://localhost:11434/ "HTTP/1.1 200 OK"
+2025-09-04 13:13:34,291 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-09-04 13:13:34,291 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-09-04 13:13:34,291 - httpcore.http11 - DEBUG - response_closed.started
+2025-09-04 13:13:34,291 - httpcore.http11 - DEBUG - response_closed.complete
+2025-09-04 13:13:34,291 - model_gateway - INFO - Health check: Model Gateway and Ollama connection OK.
+2025-09-04 13:13:34,291 - httpcore.connection - DEBUG - close.started
+2025-09-04 13:13:34,292 - httpcore.connection - DEBUG - close.complete
+INFO:     127.0.0.1:59730 - "GET /health HTTP/1.1" 200 OK
+2025-09-04 13:30:17,453 - model_gateway - DEBUG - Health check endpoint called.
+2025-09-04 13:30:17,453 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 13:30:17,453 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+2025-09-04 13:30:17,468 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=5.0 socket_options=None
+2025-09-04 13:30:17,469 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd94a2ec350>
+2025-09-04 13:30:17,469 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-09-04 13:30:17,469 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-09-04 13:30:17,469 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-09-04 13:30:17,469 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-09-04 13:30:17,469 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-09-04 13:30:17,470 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'text/plain; charset=utf-8'), (b'Date', b'Thu, 04 Sep 2025 18:30:17 GMT'), (b'Content-Length', b'17')])
+2025-09-04 13:30:17,470 - httpx - INFO - HTTP Request: GET http://localhost:11434/ "HTTP/1.1 200 OK"
+2025-09-04 13:30:17,470 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-09-04 13:30:17,470 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-09-04 13:30:17,470 - httpcore.http11 - DEBUG - response_closed.started
+2025-09-04 13:30:17,470 - httpcore.http11 - DEBUG - response_closed.complete
+2025-09-04 13:30:17,470 - model_gateway - INFO - Health check: Model Gateway and Ollama connection OK.
+2025-09-04 13:30:17,470 - httpcore.connection - DEBUG - close.started
+2025-09-04 13:30:17,470 - httpcore.connection - DEBUG - close.complete
+INFO:     127.0.0.1:60176 - "GET /health HTTP/1.1" 200 OK
+2025-09-04 13:34:06,538 - model_gateway - DEBUG - Health check endpoint called.
+2025-09-04 13:34:06,538 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-09-04 13:34:06,539 - httpx - DEBUG - load_verify_locations cafile='/home/yosh/repos/AgenticRAG/services/model-gateway/venv/lib/python3.13/site-packages/certifi/cacert.pem'
+2025-09-04 13:34:06,554 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=11434 local_address=None timeout=5.0 socket_options=None
+2025-09-04 13:34:06,556 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7fd94a2ecc50>
+2025-09-04 13:34:06,556 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-09-04 13:34:06,556 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-09-04 13:34:06,557 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-09-04 13:34:06,557 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-09-04 13:34:06,557 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-09-04 13:34:06,557 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'text/plain; charset=utf-8'), (b'Date', b'Thu, 04 Sep 2025 18:34:06 GMT'), (b'Content-Length', b'17')])
+2025-09-04 13:34:06,557 - httpx - INFO - HTTP Request: GET http://localhost:11434/ "HTTP/1.1 200 OK"
+2025-09-04 13:34:06,557 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-09-04 13:34:06,557 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-09-04 13:34:06,557 - httpcore.http11 - DEBUG - response_closed.started
+2025-09-04 13:34:06,557 - httpcore.http11 - DEBUG - response_closed.complete
+2025-09-04 13:34:06,557 - model_gateway - INFO - Health check: Model Gateway and Ollama connection OK.
+2025-09-04 13:34:06,557 - httpcore.connection - DEBUG - close.started
+2025-09-04 13:34:06,557 - httpcore.connection - DEBUG - close.complete
+INFO:     127.0.0.1:45322 - "GET /health HTTP/1.1" 200 OK

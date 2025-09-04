@@ -1,0 +1,1 @@
+This is a test document to verify the embedding system is working correctly after the async fix.

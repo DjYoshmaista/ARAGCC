@@ -276,9 +276,10 @@ test "vector store operations" {
     defer store.deinit();
 
     var v1 = try Vector.init(allocator, "test", 2);
-    defer v1.deinit();
     v1.data[0] = 1.0; v1.data[1] = 1.0;
 
     try store.addVector(v1);
     try testing.expectEqual(@as(usize, 1), store.count());
+    
+    // Don't defer v1.deinit() here as it's now owned by the store
 }

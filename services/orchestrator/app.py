@@ -4,7 +4,8 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 import httpx
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Body
 from pydantic import BaseModel
@@ -13,6 +14,25 @@ import logging
 import logging.config
 import yaml
 import os
+import sys
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Add the current directory to Python path for local imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Use absolute imports instead of relative imports
+from database_utils import DatabaseManager, DocumentMetadata, ChunkMetadata
+from text_chunker import TextChunker
+from parallel_ingestion_controller import ParallelIngestionController
+from progress_tracker import get_progress_tracker, cleanup_progress_tracker, ProgressUpdate
+
+def load_config():
+    """Load system configuration from YAML file"""
+    config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'configs', 'system.yaml')
+    with open(config_path, 'r') as f:
+        return yaml.safe_load(f)
 
 # --- Configure Logging ---
 config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'configs', 'system.yaml')
@@ -78,13 +98,14 @@ class Task:
     dependencies: List[str] = field(default_factory=list)
     priority: TaskPriority = TaskPriority.NORMAL
     status: TaskStatus = TaskStatus.PENDING
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     deadline: Optional[datetime] = None
     result: Optional[str] = None
     error: Optional[str] = None
     agent_id: Optional[str] = None
+    progress: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class Agent:
@@ -94,7 +115,7 @@ class Agent:
     capabilities: List[str] = field(default_factory=list)
     current_task: Optional[str] = None
     performance_score: float = 1.0
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Orchestrator:
     def __init__(self):
@@ -168,15 +189,26 @@ class Orchestrator:
         """Execute a single task"""
         try:
             task.status = TaskStatus.RUNNING
-            task.started_at = datetime.utcnow()
+            task.started_at = datetime.now(timezone.utc)
             
-            print(f"Executing task {task.id}: {task.description}")
+            logger.info(f"Executing task {task.id}: {task.description}")
+            
+            # Start progress monitoring for long-running tasks
+            progress_task = None
+            if task.type in ["folder_ingestion", "rag_ingest"]:
+                progress_task = asyncio.create_task(self._update_task_progress(task))
             
             # Route task based on type
             if task.type == "llm_inference":
                 result = await self.handle_llm_task(task)
             elif task.type == "vector_search":
                 result = await self.handle_vector_task(task)
+            elif task.type == "rag_ingest":
+                result = await self.handle_rag_ingest_task(task)
+            elif task.type == "rag_query":
+                result = await self.handle_rag_query_task(task)
+            elif task.type == "folder_ingestion":
+                result = await self.handle_folder_ingestion_task(task)
             elif task.type == "decomposition":
                 result = await self.handle_decomposition_task(task)
             else:
@@ -184,7 +216,11 @@ class Orchestrator:
             
             task.result = result
             task.status = TaskStatus.COMPLETED
-            task.completed_at = datetime.utcnow()
+            task.completed_at = datetime.now(timezone.utc)
+            
+            # Cancel progress monitoring
+            if progress_task and not progress_task.done():
+                progress_task.cancel()
             
             # Check for tasks that were waiting on this one
             await self.check_dependent_tasks(task.id)
@@ -192,22 +228,20 @@ class Orchestrator:
         except Exception as e:
             task.status = TaskStatus.FAILED
             task.error = str(e)
-            task.completed_at = datetime.utcnow()
-            print(f"Task {task.id} failed: {e}")
+            task.completed_at = datetime.now(timezone.utc)
+            logger.error(f"Task {task.id} failed: {e}")
     
     async def handle_llm_task(self, task: Task) -> str:
         """Handle LLM inference tasks"""
         logger.info(f"Handling LLM task {task.id} with model {task.parameters.get('model', 'default')}")
         try:
             async with httpx.AsyncClient() as client:
-                # ---> CORRECTED SECTION <---
                 request_data = {
-                    "model": task.parameters.get("model", "llama2"), # <-- Fixed: task.parameters
+                        "model": task.parameters.get("model", "granite-embedding:latest"), # <-- Fixed: task.parameters
                     "prompt": task.parameters.get("prompt", ""),     # <-- Fixed: task.parameters
                     "stream": False,
                     "parameters": task.parameters.get("model_params", {}) # <-- Fixed: task.parameters
                 }
-                # --- END CORRECTED SECTION ---
                 logger.debug(f"Sending request to Model Gateway ({self.model_gateway_url}/generate): {request_data}")
                 response = await client.post(
                         f"{self.model_gateway_url}/generate",
@@ -247,6 +281,83 @@ class Orchestrator:
         except Exception as e:
             raise Exception(f"Vector task failed: {e}")
     
+    async def handle_rag_ingest_task(self, task: Task) -> str:
+        """Handle RAG document ingestion tasks"""
+        try:
+            document_id = task.parameters.get("document_id")
+            content = task.parameters.get("content")
+            # Load config
+            config = load_config()
+            embedding_model = task.parameters.get("embedding_model") or config.get("models", {}).get("embedding_model", "granite-embedding:latest")
+            
+            # Step 1: Generate embedding using model gateway
+            async with httpx.AsyncClient() as client:
+                embedding_response = await client.post(
+                    f"{self.model_gateway_url}/embed",
+                    json={
+                        "model": embedding_model,
+                        "prompt": content
+                    },
+                    timeout=60.0
+                )
+                embedding_response.raise_for_status()
+                embedding_data = embedding_response.json()
+                embedding = embedding_data.get("embedding")
+            
+            # Step 2: Store vector in vector engine
+            vector_response = await client.post(
+                f"{self.vector_engine_url}/vectors",
+                json={
+                    "id": document_id,
+                    "vector": embedding
+                },
+                timeout=30.0
+            )
+            vector_response.raise_for_status()
+            
+            return f"Document {document_id} successfully ingested into RAG"
+        except Exception as e:
+            raise Exception(f"RAG ingestion failed: {e}")
+    
+    async def handle_rag_query_task(self, task: Task) -> str:
+        """Handle RAG query tasks"""
+        try:
+            query_text = task.parameters.get("query")
+            top_k = task.parameters.get("top_k", 5)
+            # Load config
+            config = load_config()
+            embedding_model = task.parameters.get("embedding_model") or config.get("models", {}).get("embedding_model", "granite-embedding:latest")
+            
+            # Step 1: Generate embedding for query
+            async with httpx.AsyncClient() as client:
+                embedding_response = await client.post(
+                    f"{self.model_gateway_url}/embed",
+                    json={
+                        "model": embedding_model,
+                        "prompt": query_text
+                    },
+                    timeout=60.0
+                )
+                embedding_response.raise_for_status()
+                embedding_data = embedding_response.json()
+                query_embedding = embedding_data.get("embedding")
+            
+            # Step 2: Search vector engine
+            search_response = await client.post(
+                f"{self.vector_engine_url}/search",
+                json={
+                    "vector": query_embedding,
+                    "top_k": top_k
+                },
+                timeout=30.0
+            )
+            search_response.raise_for_status()
+            search_results = search_response.json()
+            
+            return json.dumps(search_results)
+        except Exception as e:
+            raise Exception(f"RAG query failed: {e}")
+    
     async def handle_decomposition_task(self, task: Task) -> str:
         """Handle task decomposition"""
         # This is where we'll implement the scoring metrics later
@@ -262,7 +373,7 @@ class Orchestrator:
                 type="llm_inference",
                 description=subtask_desc,
                 parameters={
-                    "model": "llama2",
+                    "model": "qwen3:30b",
                     "prompt": f"Complete this subtask: {subtask_desc}"
                 },
                 dependencies=[task.id] if i == 0 else [subtask_ids[-1]]
@@ -271,6 +382,124 @@ class Orchestrator:
             subtask_ids.append(subtask_id)
         
         return json.dumps({"subtask_ids": subtask_ids})
+    
+    async def handle_folder_ingestion_task(self, task: Task) -> str:
+        """Handle folder ingestion task with enhanced progress tracking"""
+        tracker = None
+        try:
+            # Get task parameters
+            paths = task.parameters.get("paths", [])
+            recursive = task.parameters.get("recursive", True)
+            model = task.parameters.get("embedding_model", "granite-embedding:latest")
+            heartbeat_timeout = task.parameters.get("heartbeat_timeout", 300)  # 5 minutes default
+            
+            logger.info(f"Processing folder ingestion task with paths: {paths}")
+            
+            # Initialize progress tracker for enhanced monitoring
+            tracker = get_progress_tracker(task.id, heartbeat_timeout)
+            tracker.start()
+            logger.info(f"Progress tracker started for task {task.id}")
+            
+            # Load system configuration
+            config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'configs', 'system.yaml')
+            with open(config_path, 'r') as f:
+                system_config = yaml.safe_load(f)
+            
+            # Create ingestion configuration
+            ingestion_config = {
+                "postgresql": system_config["databases"]["postgresql"],
+                "qdrant": system_config["databases"]["qdrant"],
+                "model_gateway_url": f"http://{system_config['services']['model_gateway']['host']}:{system_config['services']['model_gateway']['port']}",
+                "chunk_size": task.parameters.get("chunk_size", 5000),
+                "overlap_size": task.parameters.get("overlap_size", 32),
+                "max_concurrent_files": task.parameters.get("max_concurrent_files", 5),
+                "max_concurrent_chunks": task.parameters.get("max_concurrent_chunks", 10),
+                "embedding_dimensions": 384  # For granite-embedding:latest
+            }
+            
+            # Create and initialize ingestion controller
+            controller = ParallelIngestionController(ingestion_config)
+            
+            # Set progress tracker on controller for enhanced monitoring
+            controller.progress_tracker = tracker
+            
+            # Store controller reference in task for progress tracking
+            task.controller = controller
+            
+            # Initialize database connections
+            postgresql_config = system_config.get('databases', {}).get('postgresql', {})
+            qdrant_config = system_config.get('databases', {}).get('qdrant', {})
+            controller.initialize_database(postgresql_config, qdrant_config)
+            
+            # Process all paths (folders and files)
+            batch_id = None
+            stats = {'processed_files': 0, 'failed_files': 0, 'total_chunks': 0}
+            
+            for path_str in paths:
+                path = Path(path_str)
+                if path.is_dir():
+                    # Process folder with parallel ingestion
+                    logger.info(f"Processing folder: {path}")
+                    batch_id = controller.process_folder(str(path), recursive, postgresql_config, qdrant_config)
+                elif path.is_file():
+                    # For single files, create temporary folder processing
+                    logger.info(f"Processing single file: {path}")
+                    batch_id = controller.process_folder(str(path.parent), False, postgresql_config, qdrant_config)
+                else:
+                    logger.warning(f"Path does not exist: {path}")
+            
+            # Get final statistics
+            stats = controller.get_stats()
+            stats['batch_id'] = batch_id
+            
+            # Clean up controller reference
+            if hasattr(task, 'controller'):
+                delattr(task, 'controller')
+            
+            # Convert datetime objects to ISO format strings for JSON serialization
+            # Handle nested dictionaries that might contain datetime objects
+            def serialize_datetime(obj):
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                elif isinstance(obj, dict):
+                    return {k: serialize_datetime(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [serialize_datetime(item) for item in obj]
+                else:
+                    return obj
+            
+            json_safe_stats = serialize_datetime(stats)
+            logger.info(f"Folder ingestion completed with stats: {json_safe_stats}")
+            return json.dumps(json_safe_stats)
+        except Exception as e:
+            logger.error(f"Folder ingestion failed: {e}", exc_info=True)
+            # Stop progress tracker
+            if tracker:
+                tracker.stop()
+            raise Exception(f"Folder ingestion failed: {e}")
+        finally:
+            # Clean up progress tracker
+            if tracker:
+                tracker.stop()
+                logger.info(f"Progress tracker stopped for task {task.id}")
+    
+    async def _update_task_progress(self, task: Task):
+        """Periodically update task progress information"""
+        while task.status == TaskStatus.RUNNING:
+            try:
+                # Check if controller is available
+                if hasattr(task, 'controller') and task.controller:
+                    # Get progress information from controller
+                    progress_info = task.controller.get_stats()
+                    task.progress = progress_info
+                
+                # Wait before next update
+                await asyncio.sleep(1)  # Update every second
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"Error updating task progress: {e}")
+                await asyncio.sleep(1)
     
     async def decompose_task_simple(self, task_description: str) -> List[str]:
         """Simple task decomposition using LLM"""
@@ -287,7 +516,7 @@ class Orchestrator:
                 response = await client.post(
                     f"{self.model_gateway_url}/generate",
                     json={
-                        "model": "llama2",
+                        "model": "qwen3:30b",
                         "prompt": prompt,
                         "stream": False
                     },
@@ -391,6 +620,11 @@ async def get_task(task_id: str):
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
+    # Add progress information if available
+    progress_info = {}
+    if hasattr(task, 'progress') and task.progress:
+        progress_info = task.progress
+    
     return {
         "id": task.id,
         "type": task.type,
@@ -400,7 +634,8 @@ async def get_task(task_id: str):
         "started_at": task.started_at.isoformat() if task.started_at else None,
         "completed_at": task.completed_at.isoformat() if task.completed_at else None,
         "result": task.result,
-        "error": task.error
+        "error": task.error,
+        "progress": progress_info
     }
 
 @app.get("/status")
@@ -412,7 +647,215 @@ async def get_system_status():
 async def health_check():
     """Health check endpoint"""
     logger.debug("Health code endpoint called.")
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+@app.get("/tasks/{task_id}/progress")
+async def get_task_progress(task_id: str):
+    """Get real-time progress for a specific task"""
+    try:
+        # Import the progress tracker registry
+        from progress_tracker import _progress_trackers, get_progress_tracker
+        
+        # Check if progress tracker exists for this task
+        if task_id not in _progress_trackers:
+            logger.warning(f"No progress tracker found for task {task_id}")
+            return {"error": "No progress tracking initialized for this task"}
+        
+        tracker = get_progress_tracker(task_id)
+        if not tracker.active:
+            logger.warning(f"Progress tracker for task {task_id} is not active")
+            return {"error": "No active progress tracking for this task"}
+        
+        stats = tracker.get_current_stats()
+        logger.debug(f"Progress stats for task {task_id}: {stats}")
+        return {
+            "task_id": task_id,
+            "progress": stats,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting task progress: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/tasks/{task_id}/progress/resume")
+async def resume_task_progress(task_id: str):
+    """Resume paused task after timeout"""
+    try:
+        tracker = get_progress_tracker(task_id)
+        if not tracker.active:
+            return {"error": "No active progress tracking for this task"}
+        
+        tracker.resume()
+        return {
+            "task_id": task_id,
+            "status": "resumed",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error resuming task progress: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/tasks/{task_id}/progress/pause")
+async def pause_task_progress(task_id: str):
+    """Pause task processing"""
+    try:
+        tracker = get_progress_tracker(task_id)
+        if not tracker.active:
+            return {"error": "No active progress tracking for this task"}
+        
+        tracker.pause()
+        return {
+            "task_id": task_id,
+            "status": "paused",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error pausing task progress: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ingestion/state")
+async def get_ingestion_state():
+    """Get current ingestion processing state"""
+    try:
+        from embedding_queue import embedding_queue
+        
+        # Get embedding queue stats
+        embedding_stats = embedding_queue.get_stats()
+        
+        # Try to load parallel ingestion state
+        from parallel_ingestion_controller import ParallelIngestionController
+        temp_controller = ParallelIngestionController({})
+        temp_controller.load_state()
+        parallel_stats = temp_controller.get_stats()
+        
+        return {
+            "embedding_queue": embedding_stats,
+            "parallel_ingestion": parallel_stats,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get ingestion state: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get state: {str(e)}")
+
+@app.post("/ingestion/state/clear")
+async def clear_ingestion_state():
+    """Clear all ingestion processing state"""
+    try:
+        from embedding_queue import embedding_queue
+        from parallel_ingestion_controller import ParallelIngestionController
+        
+        # Clear embedding queue state
+        embedding_queue.clear_state()
+        
+        # Clear parallel ingestion state
+        temp_controller = ParallelIngestionController({})
+        temp_controller.clear_state()
+        
+        return {
+            "status": "success",
+            "message": "All ingestion state cleared",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Failed to clear ingestion state: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear state: {str(e)}")
+
+@app.post("/ingestion/state/save")
+async def save_ingestion_state():
+    """Force save current ingestion state"""
+    try:
+        from embedding_queue import embedding_queue
+        
+        # Save embedding queue state
+        embedding_queue.save_state()
+        
+        return {
+            "status": "success", 
+            "message": "Ingestion state saved",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Failed to save ingestion state: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save state: {str(e)}")
+
+@app.get("/ingestion/stats")
+async def get_ingestion_stats():
+    """Get detailed ingestion processing statistics"""
+    try:
+        from embedding_queue import embedding_queue
+        
+        embedding_stats = embedding_queue.get_stats()
+        
+        return {
+            "embedding_queue": embedding_stats,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get ingestion stats: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
+
+@app.post("/ingest-parallel")
+async def ingest_parallel(request: dict):
+    """Start parallel ingestion processing with progress tracking"""
+    try:
+        folder_path = request.get("folder_path", "/tmp")
+        max_workers = request.get("max_workers", 4)
+        task_id = request.get("task_id", str(uuid.uuid4()))
+        heartbeat_timeout = request.get("heartbeat_timeout", 300)  # 5 minutes default
+        
+        logger.info(f"Starting parallel ingestion for {folder_path} with {max_workers} workers")
+        
+        # Initialize progress tracker
+        tracker = get_progress_tracker(task_id, heartbeat_timeout)
+        tracker.start()
+        
+        # Import and use the parallel ingestion controller
+        from parallel_ingestion_controller import ParallelIngestionController
+        
+        # Load configuration
+        config = load_config()
+        
+        # Create and start parallel ingestion
+        controller = ParallelIngestionController(config)
+        
+        # Set progress tracker on controller
+        controller.progress_tracker = tracker
+        
+        # Start processing in background
+        import threading
+        def process_in_background():
+            try:
+                batch_id = controller.process_folder(folder_path, recursive=True)
+                tracker.record_file_activity("ingestion_completed", {
+                    "batch_id": batch_id,
+                    "folder_path": folder_path
+                })
+                logger.info(f"Parallel ingestion completed with batch_id: {batch_id}")
+            except Exception as e:
+                tracker.record_file_activity("ingestion_failed", {
+                    "error": str(e),
+                    "folder_path": folder_path
+                })
+                logger.error(f"Parallel ingestion failed: {e}")
+            finally:
+                # Don't stop tracker here - let client decide when to cleanup
+                pass
+        
+        thread = threading.Thread(target=process_in_background, daemon=True)
+        thread.start()
+        
+        return {
+            "status": "started",
+            "task_id": task_id,
+            "folder_path": folder_path,
+            "max_workers": max_workers,
+            "heartbeat_timeout": heartbeat_timeout,
+            "message": "Parallel ingestion started in background with progress tracking"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to start parallel ingestion: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to start ingestion: {str(e)}")
 
 if __name__ == "__main__":
     logger.info("Starting Orchestrator application...")

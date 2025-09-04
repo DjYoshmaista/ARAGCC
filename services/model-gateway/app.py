@@ -1,3 +1,8 @@
+"""
+Model Gateway for AgenticRAG system
+Provides interface to Ollama models with rate limiting
+"""
+
 import asyncio
 import json
 from typing import Dict, List, Optional, AsyncGenerator, Any
@@ -9,7 +14,8 @@ import uvicorn
 import logging
 import os
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
+import time
 
 logger = logging.getLogger("model_gateway")
 
@@ -28,6 +34,49 @@ logging.basicConfig(
     ]
 )
 logger.info("Model Gateway logging initialized.")
+
+# Load balancing support for multiple Ollama instances
+import random
+from typing import List
+
+class OllamaInstancePool:
+    """Pool of Ollama instance URLs for load balancing"""
+    
+    def __init__(self):
+        self.instances = ["http://localhost:11434"]  # Default instance
+        self.current_index = 0
+        self.lock = asyncio.Lock()
+    
+    async def add_instance(self, url: str):
+        """Add a new Ollama instance URL to the pool"""
+        async with self.lock:
+            if url not in self.instances:
+                self.instances.append(url)
+                logging.info(f"Added Ollama instance: {url}")
+    
+    async def get_next_instance(self) -> str:
+        """Get next instance URL using round-robin"""
+        async with self.lock:
+            if not self.instances:
+                return "http://localhost:11434"  # Fallback
+            
+            url = self.instances[self.current_index % len(self.instances)]
+            self.current_index += 1
+            return url
+    
+    async def get_random_instance(self) -> str:
+        """Get random instance URL for better load distribution"""
+        async with self.lock:
+            if not self.instances:
+                return "http://localhost:11434"  # Fallback
+            return random.choice(self.instances)
+    
+    def get_instance_count(self) -> int:
+        """Get number of instances in pool"""
+        return len(self.instances)
+
+# Global instance pool
+ollama_instance_pool = OllamaInstancePool()
 
 @dataclass
 class ModelInfo:
@@ -56,11 +105,20 @@ class InferenceResponse(BaseModel):
     eval_count: Optional[int] = None
     eval_duration: Optional[int] = None
 
+class EmbeddingRequest(BaseModel):
+    model: str = "dengcao/Qwen3-Embedding-0.6B:Q8_0"
+    prompt: str
+
+class EmbeddingResponse(BaseModel):
+    embedding: List[float]
+    total_duration: Optional[int] = None
+    load_duration: Optional[int] = None
+
 class ModelGateway:
     def __init__(self, ollama_url: str = "http://localhost:11434"):
         self.ollama_url = ollama_url
         self.loaded_models: Dict[str, ModelInfo] = {}
-        self.client = httpx.AsyncClient(timeout=60.0)
+        self.client = httpx.AsyncClient(timeout=300.0)  # 5 minutes for large model operations
         
     async def initialize(self):
         """Initialize the gateway and discover available models"""
@@ -190,6 +248,78 @@ class ModelGateway:
                 "error": str(e),
                 "ollama_url": self.ollama_url
             }
+    
+    async def generate_embedding(self, model_name: str, prompt: str) -> List[float]:
+        """Generate embedding for text using load-balanced Ollama instances with GPU support"""
+        try:
+            # Get instance URL using load balancing
+            instance_url = await ollama_instance_pool.get_random_instance()
+            
+            # Try /api/embed first (as requested)
+            try:
+                async with self.client.stream(
+                    "POST",
+                    f"{instance_url}/api/embed",
+                    json={
+                        "model": model_name,
+                        "prompt": prompt,
+                        "options": {
+                            "num_thread": 4,  # Reduced to allow more concurrent requests
+                            "num_gpu": 1
+                        }
+                    },
+                    timeout=60.0
+                ) as response:
+                    response.raise_for_status()
+                    content = await response.aread()
+                    data = json.loads(content)
+                    
+                    if "embedding" in data:
+                        embedding = data["embedding"]
+                        logger.debug(f"Generated embedding with {len(embedding)} dimensions using GPU on {instance_url} via /api/embed")
+                        return embedding
+                    else:
+                        raise Exception("No embedding found in /api/embed response")
+            
+            except Exception as embed_error:
+                logger.warning(f"/api/embed failed for {instance_url}: {embed_error}")
+                
+                # Fallback to /api/embeddings
+                async with self.client.stream(
+                    "POST",
+                    f"{instance_url}/api/embeddings",
+                    json={
+                        "model": model_name,
+                        "prompt": prompt,
+                        "options": {
+                            "num_thread": 4,  # Reduced to allow more concurrent requests
+                            "num_gpu": 1
+                        }
+                    },
+                    timeout=60.0
+                ) as response:
+                    response.raise_for_status()
+                    content = await response.aread()
+                    data = json.loads(content)
+                    
+                    # Handle different response structures
+                    embedding = None
+                    if "embedding" in data:
+                        embedding = data["embedding"]
+                    elif "embeddings" in data:
+                        embeddings_array = data["embeddings"]
+                        if isinstance(embeddings_array, list) and len(embeddings_array) > 0:
+                            embedding = embeddings_array[0]
+                    
+                    if embedding:
+                        logger.debug(f"Generated embedding with {len(embedding)} dimensions using GPU on {instance_url} via /api/embeddings fallback")
+                        return embedding
+                    else:
+                        raise Exception("No embedding found in /api/embeddings response")
+        
+        except Exception as e:
+            logger.error(f"Embedding generation error: {e}")
+            raise HTTPException(status_code=500, detail=f"Embedding generation error: {e}")
 
 # FastAPI application
 app = FastAPI(title="Model Gateway", version="1.0.0")
@@ -216,13 +346,13 @@ async def health_check():
             response = await client.get("http://localhost:11434/", timeout=5.0)
             if response.status_code == 200:
                 logger.info("Health check: Model Gateway and Ollama connection OK.")
-                return {"status": "healthy", "ollama_connected": True, "timestamp": datetime.utcnow().isoformat()}
+                return {"status": "healthy", "ollama_connected": True, "timestamp": datetime.now(timezone.utc).isoformat()}
             else:
                 logger.warning(f"Health check: Model Gateway OK, but Ollama responded with status {response.status_code}.")
-                return {"status": "degraded", "ollama_connected": False, "ollama_status": response.status_code, "timestamp": datetime.utcnow().isoformat()}
+                return {"status": "degraded", "ollama_connected": False, "ollama_status": response.status_code, "timestamp": datetime.now(timezone.utc).isoformat()}
     except Exception as e:
         logger.error(f"Health check failed: Error connecting to Ollama: {e}")
-        return {"status": "unhealthy", "ollama_connected": False, "error": str(e), "timestamp": datetime.utcnow().isoformat()}
+        return {"status": "unhealthy", "ollama_connected": False, "error": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}
 
 @app.get("/models")
 async def list_models():
@@ -287,6 +417,61 @@ async def get_model_info(model_name: str):
     if not info:
         raise HTTPException(status_code=404, detail="Model not found")
     return asdict(info)
+
+@app.post("/embed")
+async def generate_embedding(request: EmbeddingRequest):
+    """Generate embedding for text using load-balanced Ollama instances"""
+    logger.info(f"Received embedding request for model '{request.model}'")
+    logger.debug(f"Request details: prompt='{request.prompt[:50]}...'")
+    try:
+        embedding = await gateway.generate_embedding(request.model, request.prompt)
+        logger.info(f"Embedding generation completed successfully for model '{request.model}'")
+        return {"embedding": embedding}
+    except httpx.RequestError as e:
+        logger.error(f"Network error calling Ollama: {e}")
+        raise HTTPException(status_code=502, detail=f"Network error calling Ollama: {e}")
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Ollama returned error {e.response.status_code}: {e.response.text}")
+        raise HTTPException(status_code=e.response.status_code, detail=f"Ollama error: {e.response.text}")
+    except Exception as e:
+        logger.error(f"Unexpected error during embedding generation: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
+@app.post("/instances/register")
+async def register_ollama_instance(request: dict):
+    """Register a new Ollama instance for load balancing"""
+    instance_url = request.get("url")
+    if not instance_url:
+        raise HTTPException(status_code=400, detail="Missing 'url' parameter")
+    
+    try:
+        # Validate instance is reachable
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{instance_url}/api/tags", timeout=5.0)
+            response.raise_for_status()
+        
+        # Add to pool
+        await ollama_instance_pool.add_instance(instance_url)
+        
+        logger.info(f"Successfully registered Ollama instance: {instance_url}")
+        return {
+            "status": "success",
+            "message": f"Registered instance: {instance_url}",
+            "total_instances": ollama_instance_pool.get_instance_count()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to register instance {instance_url}: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to register instance: {str(e)}")
+
+@app.get("/instances/stats")
+async def get_instance_stats():
+    """Get statistics about registered Ollama instances"""
+    return {
+        "total_instances": ollama_instance_pool.get_instance_count(),
+        "instances": ollama_instance_pool.instances,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
 
 if __name__ == "__main__":
     logger.info("Starting Model Gateway application...")

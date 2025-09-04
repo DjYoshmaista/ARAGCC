@@ -131,10 +131,23 @@ pip install -r requirements.txt
 deactivate
 cd ../..
 
+# Client CLI
+print_status "Setting up Client CLI..."
+cd client
+if [ ! -d "venv" ]; then
+    python3 -m venv venv
+fi
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+deactivate
+cd ..
+
 print_status "Build completed successfully!"
 print_status "Binaries are in the build/ directory"
 print_status ""
 print_status "Next steps:"
 print_status "1. Install Ollama: curl -fsSL https://ollama.ai/install.sh | sh"
-print_status "2. Install NATS: sudo pacman -S nats-server (or download from nats.io)"
-print_status "3. Run: ./shared/scripts/start-system.sh"
+print_status "2. Pull the embedding model: ollama pull dengcaoQwen3-Embedding-0.6B:Q8_0"
+print_status "3. Install NATS: sudo pacman -S nats-server (or download from nats.io)"
+print_status "4. Run: ./shared/scripts/start-system.sh"

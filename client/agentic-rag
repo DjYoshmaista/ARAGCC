@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import asyncio
+import logging
+import logging.config
+import yaml
+
+logger = logging.getLogger("client_agentic_rag")
+config_path = os.path.join(os.path.dirname(__file__), '..', 'shared', 'configs', 'system.yaml')
+
+# Add the client directory to the Python path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from app import main
+
+def setup_logging():
+    try:
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+        logging_config = config.get('logging', {})
+        log_level = logging_config.get('level', 'INFO')
+        log_format = logging_config.get('format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        log_file = logging_config.get('file', 'logs/client.log')
+
+        log_dir = os.path.dirname(log_file)
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
+        logging.basicConfig(
+            level=getattr(logging, log_level.upper(), logging.INFO),
+            format=log_format,
+            handlers=[
+                logging.FileHandler(log_file),
+                logging.StreamHandler()
+            ]
+        )
+        logger.info("Client logging configured successfully")
+    except Exception as e:
+        logging.basicConfig(level=logging.INFO)
+        logger.error(f"Failed to load logging config from {config_path}: {e}.  Using default settings.")
+
+setup_logging()
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -1,28 +1,28 @@
-[97562] 2025/08/30 18:38:22.847574 [INF] Starting nats-server
-[97562] 2025/08/30 18:38:22.847624 [INF]   Version:  2.11.6
-[97562] 2025/08/30 18:38:22.847628 [INF]   Git:      [bc813ee]
-[97562] 2025/08/30 18:38:22.847630 [INF]   Name:     NDSBT7FWZIYC6UIFF3HR7RUESA7DWMH3HHR6KINAGFBR4Z5HU6E7CBFW
-[97562] 2025/08/30 18:38:22.847633 [INF]   Node:     KnDGSZ2z
-[97562] 2025/08/30 18:38:22.847635 [INF]   ID:       NDSBT7FWZIYC6UIFF3HR7RUESA7DWMH3HHR6KINAGFBR4Z5HU6E7CBFW
-[97562] 2025/08/30 18:38:22.847823 [INF] Starting JetStream
-[97562] 2025/08/30 18:38:22.847966 [INF]     _ ___ _____ ___ _____ ___ ___   _   __  __
-[97562] 2025/08/30 18:38:22.847972 [INF]  _ | | __|_   _/ __|_   _| _ \ __| /_\ |  \/  |
-[97562] 2025/08/30 18:38:22.847976 [INF] | || | _|  | | \__ \ | | |   / _| / _ \| |\/| |
-[97562] 2025/08/30 18:38:22.847979 [INF]  \__/|___| |_| |___/ |_| |_|_\___/_/ \_\_|  |_|
-[97562] 2025/08/30 18:38:22.847982 [INF] 
-[97562] 2025/08/30 18:38:22.847985 [INF]          https://docs.nats.io/jetstream
-[97562] 2025/08/30 18:38:22.847988 [INF] 
-[97562] 2025/08/30 18:38:22.847991 [INF] ---------------- JETSTREAM ----------------
-[97562] 2025/08/30 18:38:22.847996 [INF]   Max Memory:      44.06 GB
-[97562] 2025/08/30 18:38:22.848000 [INF]   Max Storage:     15.44 GB
-[97562] 2025/08/30 18:38:22.848004 [INF]   Store Directory: "data/nats/jetstream"
-[97562] 2025/08/30 18:38:22.848007 [INF]   API Level:       1
-[97562] 2025/08/30 18:38:22.848010 [INF] -------------------------------------------
-[97562] 2025/08/30 18:38:22.848247 [INF]   Starting restore for stream '$G > AGENTS'
-[97562] 2025/08/30 18:38:22.848423 [INF]   Restored 0 messages for stream '$G > AGENTS' in 0s
-[97562] 2025/08/30 18:38:22.848473 [INF]   Starting restore for stream '$G > TASKS'
-[97562] 2025/08/30 18:38:22.848582 [INF]   Restored 0 messages for stream '$G > TASKS' in 0s
-[97562] 2025/08/30 18:38:22.848625 [INF]   Starting restore for stream '$G > VECTORS'
-[97562] 2025/08/30 18:38:22.848729 [INF]   Restored 0 messages for stream '$G > VECTORS' in 0s
-[97562] 2025/08/30 18:38:22.848866 [INF] Listening for client connections on 0.0.0.0:4222
-[97562] 2025/08/30 18:38:22.849020 [INF] Server is ready
+[34064] 2025/09/04 11:52:54.928241 [INF] Starting nats-server
+[34064] 2025/09/04 11:52:54.928283 [INF]   Version:  2.11.6
+[34064] 2025/09/04 11:52:54.928286 [INF]   Git:      [bc813ee]
+[34064] 2025/09/04 11:52:54.928289 [INF]   Name:     NBV5UPBWYYHD5KQSDJWZRA7NXW2HGCOHDUBPZQWCRNJBH2XMT5G4X3TV
+[34064] 2025/09/04 11:52:54.928292 [INF]   Node:     pt6ze2E5
+[34064] 2025/09/04 11:52:54.928294 [INF]   ID:       NBV5UPBWYYHD5KQSDJWZRA7NXW2HGCOHDUBPZQWCRNJBH2XMT5G4X3TV
+[34064] 2025/09/04 11:52:54.928449 [INF] Starting JetStream
+[34064] 2025/09/04 11:52:54.928540 [INF]     _ ___ _____ ___ _____ ___ ___   _   __  __
+[34064] 2025/09/04 11:52:54.928543 [INF]  _ | | __|_   _/ __|_   _| _ \ __| /_\ |  \/  |
+[34064] 2025/09/04 11:52:54.928545 [INF] | || | _|  | | \__ \ | | |   / _| / _ \| |\/| |
+[34064] 2025/09/04 11:52:54.928546 [INF]  \__/|___| |_| |___/ |_| |_|_\___/_/ \_\_|  |_|
+[34064] 2025/09/04 11:52:54.928547 [INF] 
+[34064] 2025/09/04 11:52:54.928549 [INF]          https://docs.nats.io/jetstream
+[34064] 2025/09/04 11:52:54.928550 [INF] 
+[34064] 2025/09/04 11:52:54.928551 [INF] ---------------- JETSTREAM ----------------
+[34064] 2025/09/04 11:52:54.928554 [INF]   Max Memory:      44.06 GB
+[34064] 2025/09/04 11:52:54.928555 [INF]   Max Storage:     21.29 GB
+[34064] 2025/09/04 11:52:54.928557 [INF]   Store Directory: "data/nats/jetstream"
+[34064] 2025/09/04 11:52:54.928558 [INF]   API Level:       1
+[34064] 2025/09/04 11:52:54.928560 [INF] -------------------------------------------
+[34064] 2025/09/04 11:52:54.928855 [INF]   Starting restore for stream '$G > AGENTS'
+[34064] 2025/09/04 11:52:54.929056 [INF]   Restored 0 messages for stream '$G > AGENTS' in 0s
+[34064] 2025/09/04 11:52:54.929135 [INF]   Starting restore for stream '$G > TASKS'
+[34064] 2025/09/04 11:52:54.929260 [INF]   Restored 0 messages for stream '$G > TASKS' in 0s
+[34064] 2025/09/04 11:52:54.929318 [INF]   Starting restore for stream '$G > VECTORS'
+[34064] 2025/09/04 11:52:54.929464 [INF]   Restored 0 messages for stream '$G > VECTORS' in 0s
+[34064] 2025/09/04 11:52:54.929696 [INF] Listening for client connections on 0.0.0.0:4222
+[34064] 2025/09/04 11:52:54.929892 [INF] Server is ready

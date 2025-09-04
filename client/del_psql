@@ -1,0 +1,5 @@
+#!/bin/bash
+psql -U postgres -d agentic_system -c "
+SELECT 'DELETE ALL TABLE_NAME FROM pg_tables WHERE schemaname = public';
+SELECT 'DELETE ALL' FROM pg_tables WHERE schemaname = 'public';
+"
