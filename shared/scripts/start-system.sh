@@ -196,7 +196,7 @@ log "Starting Model Gateway on port $MODEL_GATEWAY_PORT"
 print_status "Starting Model Gateway..."
 if check_port $MODEL_GATEWAY_PORT; then
     cd services/model-gateway
-    source venv/bin/activate
+    source ../../venv/bin/activate
     # Redirect Model Gateway's own logs to its specific log file
     python app.py > ../../logs/model-gateway-app.log 2>&1 &
     deactivate
@@ -216,7 +216,7 @@ log "Starting Orchestrator on port 8001"
 print_status "Starting Orchestrator..."
 if check_port 8001; then
     cd services/orchestrator
-    source venv/bin/activate
+    source ../../venv/bin/activate
     # Redirect Orchestrator's own logs to its specific log file
     python app.py > ../../logs/orchestrator-app.log 2>&1 &
     deactivate

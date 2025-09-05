@@ -1,0 +1,105 @@
+# System Configuration
+system:
+  name: "Multi-Agent Orchestration System"
+  version: "1.0.0"
+  environment: "development"
+
+# Service Configuration
+services:
+  orchestrator:
+    host: "localhost"
+    port: 8001
+    workers: 1
+    
+  model_gateway:
+    host: "localhost"
+    port: 8070
+    ollama_url: "http://localhost:11434"
+    default_model: "qwen3:8b"
+    
+  vector_engine:
+    host: "localhost"
+    port: 8080
+    vector_dimension: 384
+    
+  message_broker:
+    host: "localhost"
+    port: 4222
+    jetstream_enabled: true
+
+# Database Configuration  
+databases:
+  postgresql:
+    host: "localhost"
+    port: 5432
+    database: "agentic_system"
+    username: "postgres"
+    password: "password"
+    
+  qdrant:
+    host: "localhost"
+    port: 6333
+    collection_name: "embeddings"
+
+# Task Configuration
+tasks:
+  max_queue_size: 1000
+  default_timeout: 300  # seconds
+  max_retries: 3
+  
+# Ingestion Configuration
+ingestion:
+  file_processing_timeout: 1800  # 30 minutes for file processing
+  embedding_timeout: 1800  # 30 minutes for embedding generation
+  max_embedding_workers: 24  # Scale up GPU workers for multiple instances
+  embedding_batch_size: 128  # Larger batches for better efficiency
+  max_cpu_workers: 12  # Scale up CPU workers
+  max_concurrent_files: 100  # Increase concurrent file processing
+  multi_instance_embedding: false  # Temporarily disabled to fix event loop issues  
+  embedding_instances: 1  # Use single instance for stability
+  max_concurrent_instances: 1  # Use single instance for stability
+
+# Progress Tracking Configuration
+  
+# Progress Tracking Configuration
+progress_tracking:
+  heartbeat_timeout: 300  # 5 minutes database inactivity timeout
+  progress_update_interval: 2  # Update progress every 2 seconds
+  checkpoint_interval: 30  # Save state every 30 seconds
+  enable_dual_progress_bars: true  # Show PostgreSQL and Vector DB progress separately
+  
+  priorities:
+    low: 1
+    normal: 2
+    high: 3
+    critical: 4
+
+# Model Configuration
+models:
+  default_models:
+    - "qwen3:8b"
+    - "qwen3-coder"
+    - "gemma3n:e4b"
+    - "granite-embedding:latest"
+    
+  embedding_model: "granite-embedding:latest"
+  embedding_dimensions: 384
+    
+  parameters:
+    temperature: 0.5
+    max_tokens: 20000
+    top_p: 0.9
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/system.log"
+  max_size: "10MB"
+  backup_count: 3
+
+# Monitoring Configuration
+monitoring:
+  metrics_enabled: true
+  health_check_interval: 30  # seconds
+  performance_tracking: true
