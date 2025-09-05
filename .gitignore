@@ -1,6 +1,15 @@
 **/*.pyc
 *.pyc
 **/*.log
+**.log
+**.pyc
+**.json
+**.jsonl
+**.env
+**data/
+**build/
+**snapshots/
+**storage/
 *.log
 **/*.json
 *.json
@@ -29,3 +38,6 @@ __pycache__/
 *.sql
 1
 *.md
+**.md
+**.db
+**.sql
