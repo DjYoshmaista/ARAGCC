@@ -1,14 +1,21 @@
+"""
+Advanced Multi-Agent Orchestrator Service
+
+Provides centralized task orchestration, dependency management, and
+high-performance parallel processing for the AgenticRAG system.
+"""
+
 import asyncio
 import uuid
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Any, Union
+from dataclasses import dataclass, field, asdict
 from enum import Enum
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import httpx
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Body
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import uvicorn
 import logging
 import logging.config
@@ -16,6 +23,7 @@ import yaml
 import os
 import sys
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 
 load_dotenv()
 
@@ -28,11 +36,33 @@ from core.ingestion.text_processor import TextChunker
 from core.ingestion.controller import ParallelIngestionController
 from core.ingestion.progress_tracker import get_progress_tracker, cleanup_progress_tracker, ProgressUpdate
 
-def load_config():
-    """Load system configuration from YAML file"""
+def load_config() -> Dict[str, Any]:
+    """
+    Load system configuration from YAML file with error handling.
+    
+    Returns:
+        Dictionary containing system configuration
+        
+    Raises:
+        FileNotFoundError: If config file doesn't exist
+        yaml.YAMLError: If config file is invalid
+    """
     config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'configs', 'system.yaml')
-    with open(config_path, 'r') as f:
-        return yaml.safe_load(f)
+    try:
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+            if not isinstance(config, dict):
+                raise ValueError("Configuration file must contain a YAML dictionary")
+            return config
+    except FileNotFoundError:
+        logger.error(f"Configuration file not found at {config_path}")
+        raise
+    except yaml.YAMLError as e:
+        logger.error(f"Invalid YAML in configuration file: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error loading configuration: {e}")
+        raise
 
 # --- Configure Logging ---
 config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'configs', 'system.yaml')
@@ -83,14 +113,36 @@ class TaskPriority(Enum):
     CRITICAL = 4
 
 class TaskCreateRequest(BaseModel):
-    task_type: str
-    description: str
-    parameters: Optional[Dict[str, Any]] = {}
-    dependencies: Optional[List[str]] = []
-    priority: Optional[str] = "normal"
+    """Request model for creating new tasks"""
+    task_type: str = Field(..., description="Type of task to execute")
+    description: str = Field(..., description="Human-readable task description")
+    parameters: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Task-specific parameters")
+    dependencies: Optional[List[str]] = Field(default_factory=list, description="List of task IDs this task depends on")
+    priority: Optional[str] = Field(default="normal", description="Task priority: low, normal, high, critical")
+    deadline: Optional[str] = Field(None, description="Task deadline in ISO format")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "task_type": "llm_inference",
+                "description": "Generate response for user query",
+                "parameters": {
+                    "model": "qwen3:8b",
+                    "prompt": "What is machine learning?",
+                    "temperature": 0.7
+                },
+                "dependencies": [],
+                "priority": "normal"
+            }
+        }
 
 @dataclass
 class Task:
+    """
+    Represents a task in the orchestration system.
+    
+    Tracks task lifecycle, dependencies, and execution metadata.
+    """
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     type: str = ""
     description: str = ""
@@ -106,6 +158,35 @@ class Task:
     error: Optional[str] = None
     agent_id: Optional[str] = None
     progress: Dict[str, Any] = field(default_factory=dict)
+    retry_count: int = 0
+    max_retries: int = 3
+    timeout_seconds: Optional[int] = None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert task to dictionary for serialization"""
+        task_dict = asdict(self)
+        # Convert enums and datetimes to serializable formats
+        task_dict['priority'] = self.priority.value if isinstance(self.priority, TaskPriority) else self.priority
+        task_dict['status'] = self.status.value if isinstance(self.status, TaskStatus) else self.status
+        
+        # Convert datetime objects
+        for dt_field in ['created_at', 'started_at', 'completed_at', 'deadline']:
+            if task_dict[dt_field] and isinstance(task_dict[dt_field], datetime):
+                task_dict[dt_field] = task_dict[dt_field].isoformat()
+        
+        return task_dict
+    
+    def is_overdue(self) -> bool:
+        """Check if task is past its deadline"""
+        if not self.deadline:
+            return False
+        return datetime.now(timezone.utc) > self.deadline
+    
+    def get_execution_time(self) -> Optional[timedelta]:
+        """Get task execution time if completed"""
+        if self.started_at and self.completed_at:
+            return self.completed_at - self.started_at
+        return None
 
 @dataclass
 class Agent:

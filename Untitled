@@ -1,0 +1,10 @@
+- cli/app.py (Old CLI): This appears to be a deprecated placeholder. I recommend removing it to avoid confusion with the more functional client/app.py. client/app.py (New CLI): While more complete, many commands are
+partially implemented or placeholders, including query, config, agent, db, plugin, status, tui, rag, and embed. core/ingestion/controller.py: The _database_worker is a placeholder for future batch operations. Error
+handling in _process_single_file is too generic, and the file_format_handlers need to be defined and verified. core/orchestrator/app.py & services/orchestrator/app.py: Task, agent, and plugin management are all basic or
+unimplemented. Running tasks cannot be canceled, and error handling is minimal. services/model-gateway/app.py: Model management is basic, lacking dynamic loading/unloading. Error handling is too generic. shared/scripts/:
+ The test-system.sh and status.sh scripts, mentioned in start-system.sh, are missing. General: The codebase suffers from sparse and outdated documentation, inconsistent configuration management, and a lack of
+comprehensive, up-to-date tests.
+Before undertaking any processes/procedures I would like for you to read, parse, and understand all of the code, its structure, purpose, and usage/use case(s) in all of the code in every folder and subfolder
+within the project root folder (excepting the code from the tests/ folder in the root folder).  Then, continue, thinking through every edit, update, and code change made.  Make sure to insert multiple logging
+statements that log to the terminal and to a logfile for each statement, execution, and action taken by the testing script/program.  Read the code files and parse the contents to ensure that you're finding
+and replacing the correct strings/code/content with the updated code and/or logic

@@ -29,7 +29,8 @@ class VectorManager:
         try:
             self.client = QdrantClient(
                 host=self.config['host'],
-                port=self.config['port']
+                port=self.config['port'],
+                timeout=60
             )
             logger.info("Successfully connected to Qdrant")
             return True

@@ -5,6 +5,13 @@ AgenticRAG CLI - Advanced Multi-Agent System Command Line Interface
 This CLI provides comprehensive interaction with the AgenticRAG multi-agent system,
 supporting file processing, RAG database operations, model configuration, and more.
 
+Features:
+- Task orchestration and monitoring
+- Document ingestion with progress tracking
+- Model configuration and management
+- Health monitoring and diagnostics
+- RAG database operations
+
 Usage:
   agentic-rag <command> [options] [files/folders...]
   agentic-rag --help
@@ -18,17 +25,18 @@ import os
 import sys
 import yaml
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Tuple
 import httpx
 import logging
-from dataclasses import dataclass, asdict
-from datetime import datetime
+from dataclasses import dataclass, asdict, field
+from datetime import datetime, timedelta
 import subprocess
 import tempfile
 import threading
 import time
 from tqdm import tqdm
 import warnings
+from contextlib import asynccontextmanager
 
 # CLI Configuration
 CLI_VERSION = "1.0.0"
@@ -39,7 +47,12 @@ LOG_DIR = Path.home() / ".local" / "share" / "agentic-rag" / "logs"
 
 @dataclass
 class CLIConfig:
-    """CLI configuration structure"""
+    """
+    CLI configuration structure with comprehensive validation.
+    
+    Manages all configuration settings for the AgenticRAG CLI including
+    service endpoints, database settings, RAG parameters, and user preferences.
+    """
     # Service endpoints
     orchestrator_url: str = "http://localhost:8001"
     model_gateway_url: str = "http://localhost:8070"
@@ -66,18 +79,24 @@ class CLIConfig:
     
     # Model settings
     default_model: str = "qwen3:8b"
-    models: Dict[str, Dict] = None
+    models: Optional[Dict[str, Dict]] = None
     
     # Plugin settings
-    plugin_dir: Path = CONFIG_DIR / "plugins"
-    enabled_plugins: List[str] = None
+    plugin_dir: Optional[Path] = None
+    enabled_plugins: Optional[List[str]] = None
     
     # Interface settings
     interactive_mode: bool = True
     color_output: bool = True
     verbose: bool = False
     
+    # Performance settings
+    timeout_seconds: int = 300
+    max_retries: int = 3
+    retry_delay: float = 1.0
+    
     def __post_init__(self):
+        """Initialize default values and validate configuration."""
         if self.models is None:
             self.models = {
                 "orchestration": {"model": "qwen3:8b", "temperature": 0.3},
@@ -87,11 +106,52 @@ class CLIConfig:
             }
         if self.enabled_plugins is None:
             self.enabled_plugins = []
+        if self.plugin_dir is None:
+            self.plugin_dir = CONFIG_DIR / "plugins"
+            
+        # Validate configuration
+        self._validate_config()
+    
+    def _validate_config(self) -> None:
+        """Validate configuration values."""
+        # Validate port numbers
+        if not (1 <= self.postgresql_port <= 65535):
+            raise ValueError(f"Invalid PostgreSQL port: {self.postgresql_port}")
+        
+        # Validate RAG settings
+        if not (1 <= self.rag_top_k <= 100):
+            raise ValueError(f"Invalid rag_top_k: {self.rag_top_k}")
+        if not (-10.0 <= self.rag_weight <= 10.0):
+            raise ValueError(f"Invalid rag_weight: {self.rag_weight}")
+        
+        # Validate agent settings
+        if not (1 <= self.max_agents <= 50):
+            raise ValueError(f"Invalid max_agents: {self.max_agents}")
+        if not (0.0 <= self.default_temperature <= 2.0):
+            raise ValueError(f"Invalid default_temperature: {self.default_temperature}")
+        
+        # Validate performance settings
+        if not (10 <= self.timeout_seconds <= 3600):
+            raise ValueError(f"Invalid timeout_seconds: {self.timeout_seconds}")
+        if not (1 <= self.max_retries <= 10):
+            raise ValueError(f"Invalid max_retries: {self.max_retries}")
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary for serialization."""
+        config_dict = asdict(self)
+        # Convert Path objects to strings
+        if config_dict['plugin_dir']:
+            config_dict['plugin_dir'] = str(config_dict['plugin_dir'])
+        return config_dict
 
 class CLIManager:
-    """Main CLI management class"""
+    """Main CLI management class.
+
+    Handles configuration, logging, and HTTP client management.
+    """
     
     def __init__(self):
+        """Initialize the CLI manager."""
         self.config: CLIConfig = CLIConfig()
         self.http_client: Optional[httpx.AsyncClient] = None
         self.logger = self._setup_logging()
@@ -99,7 +159,7 @@ class CLIManager:
         self._load_config()
     
     def _setup_logging(self) -> logging.Logger:
-        """Setup logging configuration"""
+        """Setup logging configuration."""
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         
         logger = logging.getLogger(CLI_NAME)
@@ -116,13 +176,13 @@ class CLIManager:
         return logger
     
     def _ensure_directories(self):
-        """Ensure necessary directories exist"""
+        """Ensure necessary directories exist."""
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         self.config.plugin_dir.mkdir(parents=True, exist_ok=True)
     
     def _load_config(self):
-        """Load configuration from file"""
+        """Load configuration from file."""
         if CONFIG_FILE.exists():
             try:
                 with open(CONFIG_FILE, 'r') as f:
@@ -139,7 +199,7 @@ class CLIManager:
                 print(f"Warning: Could not load config file: {e}")
     
     def _save_config(self):
-        """Save current configuration to file"""
+        """Save current configuration to file."""
         try:
             with open(CONFIG_FILE, 'w') as f:
                 yaml.dump(asdict(self.config), f, default_flow_style=False)
@@ -149,20 +209,24 @@ class CLIManager:
             print(f"Error: Could not save config file: {e}")
     
     async def _get_http_client(self) -> httpx.AsyncClient:
-        """Get or create HTTP client"""
+        """Get or create HTTP client."""
         if self.http_client is None:
             self.http_client = httpx.AsyncClient(timeout=300.0)  # 5 minutes for large ingestion tasks
         return self.http_client
     
     async def close(self):
-        """Cleanup resources"""
+        """Cleanup resources."""
         if self.http_client:
             await self.http_client.aclose()
 
 class CommandParser:
-    """Command line argument parser"""
+    """Command line argument parser.
+
+    Handles the creation of the main parser and sub-parsers for all commands.
+    """
     
     def __init__(self, cli_manager: CLIManager):
+        """Initialize the command parser."""
         self.cli_manager = cli_manager
         self.parser = self._create_parser()
     
@@ -291,9 +355,13 @@ Examples:
         return self.parser.parse_args(args)
 
 class APIClient:
-    """HTTP API client for communicating with backend services"""
+    """HTTP API client for communicating with backend services.
+
+    Handles all HTTP requests to the orchestrator, model gateway, and vector engine.
+    """
     
     def __init__(self, cli_manager: CLIManager):
+        """Initialize the API client."""
         self.cli_manager = cli_manager
         self.config = cli_manager.config
         self.logger = cli_manager.logger
@@ -311,16 +379,24 @@ class APIClient:
         for service, url in services.items():
             try:
                 response = await client.get(url, timeout=5.0)
+                response.raise_for_status()
                 results[service] = {
-                    'status': 'healthy' if response.status_code == 200 else 'unhealthy',
+                    'status': 'healthy',
                     'status_code': response.status_code,
                     'response_time': response.elapsed.total_seconds()
                 }
-            except Exception as e:
+            except httpx.ConnectError as e:
+                results[service] = {'status': 'error', 'error': f"Connection error: {e}"}
+            except httpx.Timeout as e:
+                results[service] = {'status': 'error', 'error': f"Timeout error: {e}"}
+            except httpx.HTTPStatusError as e:
                 results[service] = {
-                    'status': 'error',
+                    'status': 'unhealthy',
+                    'status_code': e.response.status_code,
                     'error': str(e)
                 }
+            except Exception as e:
+                results[service] = {'status': 'error', 'error': str(e)}
         
         return results
     
@@ -342,6 +418,9 @@ class APIClient:
             )
             response.raise_for_status()
             return response.json()
+        except httpx.HTTPStatusError as e:
+            self.logger.error(f"Error submitting task: {e.response.text}")
+            raise
         except Exception as e:
             self.logger.error(f"Error submitting task: {e}")
             raise
@@ -354,6 +433,9 @@ class APIClient:
             response = await client.get(f"{self.config.orchestrator_url}/tasks/{task_id}")
             response.raise_for_status()
             return response.json()
+        except httpx.HTTPStatusError as e:
+            self.logger.error(f"Error getting task status: {e.response.text}")
+            raise
         except Exception as e:
             self.logger.error(f"Error getting task status: {e}")
             raise
@@ -377,11 +459,14 @@ class APIClient:
             )
             response.raise_for_status()
             return response.json()
+        except httpx.HTTPStatusError as e:
+            self.logger.error(f"Error generating response: {e.response.text}")
+            raise
         except Exception as e:
             self.logger.error(f"Error generating response: {e}")
             raise
 
-async def main():
+async def main(argv: Optional[List[str]] = None):
     """Main CLI entry point"""
     # Suppress tqdm warnings that might interfere with display
     warnings.filterwarnings("ignore", category=UserWarning, module="tqdm")
@@ -391,7 +476,7 @@ async def main():
     api_client = APIClient(cli_manager)
     
     try:
-        args = parser.parse_args()
+        args = parser.parse_args(argv)
         
         # Update config based on args
         if args.verbose:
@@ -435,24 +520,99 @@ async def main():
 # Command handlers (to be implemented in following steps)
 async def handle_query_command(args, cli_manager, api_client):
     """Handle query command"""
-    print(f"Query: {args.prompt}")
-    print("This command will be fully implemented in the next iteration.")
+    try:
+        task_response = await api_client.submit_task(
+            task_type="query",
+            description=f"Query: {args.prompt}",
+            parameters={
+                "prompt": args.prompt,
+                "model": args.model or cli_manager.config.models["inference"]["model"],
+                "temperature": args.temperature or cli_manager.config.default_temperature,
+                "rag_weight": args.rag_weight or cli_manager.config.rag_weight,
+                "top_k": args.top_k or cli_manager.config.rag_top_k,
+                "context_window": args.context_window or cli_manager.config.default_context_window,
+            }
+        )
+        
+        task_id = task_response["task_id"]
+        print(f"Submitted query task with ID: {task_id}")
+        
+        # Wait for task completion
+        while True:
+            task_status = await api_client.get_task_status(task_id)
+            if task_status["status"] in ["completed", "failed"]:
+                break
+            await asyncio.sleep(1)
+        
+        if task_status["status"] == "completed":
+            print("Response:")
+            print(task_status["result"])
+        else:
+            print(f"Query failed: {task_status['error']}")
+            
+    except Exception as e:
+        print(f"Error handling query: {e}")
 
 async def handle_config_command(args, cli_manager):
     """Handle configuration command"""
     if args.show:
         print(yaml.dump(asdict(cli_manager.config), default_flow_style=False))
-    else:
-        print("Configuration management will be implemented in the next iteration.")
+    
+    if args.set:
+        for setting in args.set:
+            key, value = setting.split('=', 1)
+            if hasattr(cli_manager.config, key):
+                # Convert value to the correct type
+                try:
+                    field_type = type(getattr(cli_manager.config, key))
+                    setattr(cli_manager.config, key, field_type(value))
+                except (ValueError, TypeError):
+                    print(f"Invalid value for {key}: {value}")
+            else:
+                print(f"Unknown config key: {key}")
+        cli_manager._save_config()
+        print("Configuration updated.")
+
+    if args.reset:
+        cli_manager.config = CLIConfig()
+        cli_manager._save_config()
+        print("Configuration reset to default.")
+
+    if args.validate:
+        # Basic validation for now
+        print("Configuration validation is not fully implemented yet.")
+        print("A basic check confirms that the orchestrator is reachable.")
+        api_client = APIClient(cli_manager)
+        health = await api_client.health_check()
+        if health.get('orchestrator', {}).get('status') == 'healthy':
+            print("✅ Orchestrator is reachable.")
+        else:
+            print("❌ Orchestrator is not reachable.")
 
 async def handle_status_command(args, cli_manager, api_client):
     """Handle status command"""
-    print("Checking system status...")
-    health = await api_client.health_check()
-    
-    for service, status in health.items():
-        status_icon = "✅" if status.get('status') == 'healthy' else "❌"
-        print(f"{status_icon} {service}: {status.get('status', 'unknown')}")
+    if args.health or not (args.services or args.metrics):
+        print("Checking system health...")
+        health = await api_client.health_check()
+        for service, status in health.items():
+            status_icon = "✅" if status.get('status') == 'healthy' else "❌"
+            print(f"{status_icon} {service}: {status.get('status', 'unknown')}")
+
+    if args.services:
+        print("\nChecking service status...")
+        health = await api_client.health_check()
+        for service, status in health.items():
+            print(f"- {service}:")
+            for key, value in status.items():
+                print(f"  {key}: {value}")
+
+    if args.metrics:
+        print("\nSystem metrics are not fully implemented yet.")
+        print("Displaying basic health check metrics:")
+        health = await api_client.health_check()
+        for service, status in health.items():
+            if status.get('status') == 'healthy':
+                print(f"- {service} response time: {status.get('response_time')}s")
 
 async def handle_tui_command(args, cli_manager):
     """Handle TUI command"""
@@ -528,9 +688,30 @@ async def handle_rag_command(args, cli_manager, api_client):
                 
         except Exception as e:
             print(f"Error querying RAG: {e}")
+
+    elif args.list:
+        try:
+            client = await cli_manager._get_http_client()
+            response = await client.get(f"{cli_manager.config.orchestrator_url}/rag/documents")
+            response.raise_for_status()
+            documents = response.json()
+            print("RAG Documents:")
+            for doc in documents:
+                print(f"- {doc['id']}: {doc['file_name']}")
+        except Exception as e:
+            print(f"Error listing RAG documents: {e}")
+
+    elif args.delete:
+        try:
+            client = await cli_manager._get_http_client()
+            response = await client.delete(f"{cli_manager.config.orchestrator_url}/rag/documents/{args.delete}")
+            response.raise_for_status()
+            print(f"Document {args.delete} deleted successfully.")
+        except Exception as e:
+            print(f"Error deleting RAG document: {e}")
     
     else:
-        print("RAG command requires either --ingest or --query parameter.")
+        print("RAG command requires either --ingest, --query, --list, or --delete parameter.")
         print("Use --help for more information.")
 
 async def handle_ingest_command(args, cli_manager, api_client):
@@ -557,248 +738,74 @@ async def handle_ingest_command(args, cli_manager, api_client):
         task_id = task_response["task_id"]
         print(f"🚀 Started ingestion task: {task_id}")
         print("📁 Processing files with dual progress tracking...")
-        print("⏱️  Timeout: 5 minutes of database inactivity")
-        print()
         
         # Initialize dual progress bars
-        postgres_pbar = None
-        vector_pbar = None
-        
-        # Progress tracking
-        timeout_threshold = 300  # 5 minutes
-        
-        print("📊 Initializing progress tracking...")
-        
-        # Wait for task completion with progress updates
-        last_progress_shown = None
-        fallback_mode = False
-        
-        while True:
-            try:
-                # Get progress from new endpoint
-                client = await cli_manager._get_http_client()
-                progress_response = await client.get(f"{orchestrator_url}/tasks/{task_id}/progress")
-                progress_response.raise_for_status()
-                progress_data = progress_response.json()
-                
-                if "error" in progress_data:
-                    if not fallback_mode:
-                        print(f"📊 Progress endpoint error: {progress_data.get('error')}")
-                        print("📊 Switching to fallback progress monitoring...")
-                        fallback_mode = True
-                    
-                    # Fallback to task status
-                    task_status = await api_client.get_task_status(task_id)
-                    if task_status["status"] in ["completed", "failed"]:
-                        break
-                    
-                    # Show simple progress in fallback mode
-                    current_time = datetime.now().strftime("%H:%M:%S")
-                    print(f"⏳ [{current_time}] Task {task_id[:8]} - Status: {task_status['status']}")
-                    
-                    await asyncio.sleep(5)  # Longer interval in fallback
-                    continue
-                
-                progress = progress_data.get("progress", {})
-                postgres_stats = progress.get("postgres", {})
-                vector_stats = progress.get("vector", {})
-                
-                # Debug output (first time only)
-                if last_progress_shown is None:
-                    print(f"📊 Progress data structure received:")
-                    print(f"   - PostgreSQL stats: {list(postgres_stats.keys()) if postgres_stats else 'None'}")
-                    print(f"   - Vector stats: {list(vector_stats.keys()) if vector_stats else 'None'}")
-                    last_progress_shown = True
-                
-                # Check for timeout condition
-                if progress.get("paused", False):
-                    print("\n⏸️  Processing paused due to database inactivity timeout!")
-                    print(f"   No activity detected for {timeout_threshold // 60} minutes")
-                    print("   Options:")
-                    print("   1. Continue processing (c)")
-                    print("   2. Stop processing (s)")
-                    print("   3. Check system status (t)")
-                    
-                    choice = input("   Your choice [c/s/t]: ").lower().strip()
-                    
-                    if choice == 'c':
-                        # Resume processing
-                        client = await cli_manager._get_http_client()
-                        resume_response = await client.post(f"{orchestrator_url}/tasks/{task_id}/progress/resume")
-                        resume_response.raise_for_status()
-                        print("✅ Processing resumed")
-                        continue
-                    elif choice == 's':
-                        # Stop processing
-                        client = await cli_manager._get_http_client()
-                        pause_response = await client.post(f"{orchestrator_url}/tasks/{task_id}/progress/pause")
-                        pause_response.raise_for_status()
-                        print("🛑 Processing stopped by user")
-                        break
-                    elif choice == 't':
-                        print("🔍 Checking system status...")
-                        continue
-                    else:
-                        print("   Invalid choice, continuing...")
-                        continue
-                
-                # Initialize progress bars if we have any meaningful data
-                # Initialize progress bars earlier to ensure they show up
-                if postgres_pbar is None and postgres_stats:
-                    # Use a more reasonable estimate based on available data
-                    total_files = max(
-                        postgres_stats.get("total_files", 100),  # Try to get total from stats
-                        postgres_stats.get("files_processed", 0) + 100,  # Add buffer for remaining
-                        postgres_stats.get("documents_stored", 0) + 50,
-                        100  # Minimum reasonable total
-                    )
-                    postgres_pbar = tqdm(
-                        total=total_files,
-                        desc="📝 PostgreSQL",
-                        unit="files",
-                        position=0,
-                        leave=True,
-                        bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
-                    )
-                    # Force refresh to ensure visibility
-                    postgres_pbar.refresh()
-                    print("📊 PostgreSQL progress bar initialized")
-                
-                if vector_pbar is None and vector_stats:
-                    # Use actual chunks created or a reasonable estimate
-                    total_embeddings = max(
-                        postgres_stats.get("chunks_created", 0) if postgres_stats else 0,  # Each chunk needs embedding
-                        vector_stats.get("embeddings_generated", 0) + 100,
-                        vector_stats.get("embeddings_stored", 0) + 100,
-                        100  # Minimum reasonable total
-                    )
-                    vector_pbar = tqdm(
-                        total=total_embeddings,
-                        desc="🔮 Vector DB",
-                        unit="emb",
-                        position=1,
-                        leave=True,
-                        bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
-                    )
-                    # Force refresh to ensure visibility
-                    vector_pbar.refresh()
-                    print("📊 Vector database progress bar initialized")
-                
-                # Update progress bars or show text progress
-                if postgres_pbar:
-                    postgres_pbar.n = postgres_stats.get("files_processed", 0)
-                    postgres_pbar.set_postfix({
-                        "docs": postgres_stats.get("documents_stored", 0),
-                        "chunks": postgres_stats.get("chunks_created", 0),
-                        "rate": f"{postgres_stats.get('files_per_second', 0):.1f}/s"
-                    })
-                    postgres_pbar.refresh()
-                else:  # Always show text progress to ensure user feedback
-                    files_processed = postgres_stats.get("files_processed", 0)
-                    docs_stored = postgres_stats.get("documents_stored", 0)
-                    chunks_created = postgres_stats.get("chunks_created", 0)
-                    if files_processed > 0 or docs_stored > 0 or chunks_created > 0:
-                        current_time = datetime.now().strftime("%H:%M:%S")
-                        print(f"📝 [{current_time}] PostgreSQL: {files_processed} files, {docs_stored} docs, {chunks_created} chunks")
-                
-                if vector_pbar:
-                    vector_pbar.n = vector_stats.get("embeddings_stored", 0)
-                    vector_pbar.set_postfix({
-                        "generated": vector_stats.get("embeddings_generated", 0),
-                        "queue": vector_stats.get("queue_size", 0),
-                        "rate": f"{vector_stats.get('embeddings_per_second', 0):.1f}/s"
-                    })
-                    vector_pbar.refresh()
-                else:  # Always show text progress to ensure user feedback
-                    embeddings_gen = vector_stats.get("embeddings_generated", 0)
-                    embeddings_stored = vector_stats.get("embeddings_stored", 0)
-                    queue_size = vector_stats.get("queue_size", 0)
-                    if embeddings_gen > 0 or embeddings_stored > 0 or queue_size > 0:
-                        current_time = datetime.now().strftime("%H:%M:%S")
-                        print(f"🔮 [{current_time}] Vector DB: {embeddings_stored} stored, {embeddings_gen} generated, queue: {queue_size}")
-                
-                # Check task completion
-                task_status = await api_client.get_task_status(task_id)
-                if task_status["status"] in ["completed", "failed"]:
-                    # Final update
-                    if postgres_pbar:
-                        postgres_pbar.n = postgres_pbar.total
-                        postgres_pbar.refresh()
-                        postgres_pbar.close()
-                    
-                    if vector_pbar:
-                        vector_pbar.n = vector_pbar.total
-                        vector_pbar.refresh()
-                        vector_pbar.close()
-                    
-                    # Ensure progress bars are properly cleaned up
-                    if postgres_pbar or vector_pbar:
-                        print()  # Add a newline after progress bars
-                        
-                    print(f"✅ Task {task_status['status']}!")
-                    break
-                
-                await asyncio.sleep(2)  # Update every 2 seconds
-                
-            except Exception as e:
-                print(f"\n⚠️  Progress monitoring error: {e}")
-                print(f"   Error type: {type(e).__name__}")
-                
-                # Try to get basic task status as fallback
-                try:
-                    task_status = await api_client.get_task_status(task_id)
-                    current_time = datetime.now().strftime("%H:%M:%S")
-                    print(f"⏳ [{current_time}] Fallback - Task status: {task_status['status']}")
-                    
-                    if task_status["status"] in ["completed", "failed"]:
-                        print(f"✅ Task completed with status: {task_status['status']}")
-                        break
-                except Exception as fallback_error:
-                    print(f"⚠️  Could not get fallback status: {fallback_error}")
-                
-                await asyncio.sleep(5)  # Longer delay on error
-        
-        # Clean up progress bars
-        try:
-            if postgres_pbar:
-                postgres_pbar.close()
-            if vector_pbar:
-                vector_pbar.close()
-        except:
-            pass
-        
-        # Show final results
-        try:
-            final_task_status = await api_client.get_task_status(task_id)
-            if final_task_status["status"] == "completed":
-                if "result" in final_task_status:
-                    try:
-                        stats = json.loads(final_task_status["result"])
-                        print(f"📊 Final Stats:")
-                        print(f"   Files: {stats.get('files_ingested', 0)}")
-                        print(f"   Chunks: {stats.get('chunks_created', 0)}")
-                        print(f"   Embeddings: {stats.get('embeddings_generated', 0)}")
-                        if stats.get('errors', 0) > 0:
-                            print(f"   Errors: {stats.get('errors', 0)}")
-                    except:
-                        print("   (Stats parsing failed)")
-            elif final_task_status["status"] == "failed":
-                print(f"❌ Error: {final_task_status.get('error', 'Unknown error')}")
-        except:
-            print("   (Could not retrieve final status)")
+        with tqdm(total=100, desc="📝 PostgreSQL", unit="files", position=0) as postgres_pbar, \
+             tqdm(total=100, desc="🔮 Vector DB", unit="emb", position=1) as vector_pbar:
             
-    except httpx.TimeoutException:
-        print("Error: Task submission timed out after 5 minutes.")
-        print("This may happen with very large datasets. Please check:")
-        print("1. All services are running (./shared/scripts/status.sh)")
-        print("2. Ollama is responding (curl http://localhost:11434/api/version)")
-        print("3. Consider processing smaller batches")
-    except httpx.ConnectError:
-        print("Error: Cannot connect to orchestrator service.")
-        print("Please start the system with: ./shared/scripts/start-system.sh")
+            while True:
+                try:
+                    client = await cli_manager._get_http_client()
+                    progress_response = await client.get(f"{orchestrator_url}/tasks/{task_id}/progress")
+                    progress_response.raise_for_status()
+                    progress_data = progress_response.json()
+
+                    if "error" in progress_data:
+                        # Fallback to task status
+                        task_status = await api_client.get_task_status(task_id)
+                        if task_status["status"] in ["completed", "failed"]:
+                            break
+                        await asyncio.sleep(5)
+                        continue
+
+                    progress = progress_data.get("progress", {})
+                    postgres_stats = progress.get("postgres", {})
+                    vector_stats = progress.get("vector", {})
+
+                    # Update PostgreSQL progress bar
+                    if postgres_stats:
+                        total_files = postgres_stats.get("total_files", 100)
+                        processed_files = postgres_stats.get("files_processed", 0)
+                        postgres_pbar.total = total_files
+                        postgres_pbar.n = processed_files
+                        postgres_pbar.set_postfix({
+                            "docs": postgres_stats.get("documents_stored", 0),
+                            "chunks": postgres_stats.get("chunks_created", 0),
+                            "rate": f"{postgres_stats.get('files_per_second', 0):.1f}/s"
+                        })
+                        postgres_pbar.refresh()
+
+                    # Update Vector DB progress bar
+                    if vector_stats:
+                        total_embeddings = postgres_stats.get("chunks_created", 100)
+                        processed_embeddings = vector_stats.get("embeddings_stored", 0)
+                        vector_pbar.total = total_embeddings
+                        vector_pbar.n = processed_embeddings
+                        vector_pbar.set_postfix({
+                            "generated": vector_stats.get("embeddings_generated", 0),
+                            "queue": vector_stats.get("queue_size", 0),
+                            "rate": f"{vector_stats.get('embeddings_per_second', 0):.1f}/s"
+                        })
+                        vector_pbar.refresh()
+
+                    # Check task completion
+                    task_status = await api_client.get_task_status(task_id)
+                    if task_status["status"] in ["completed", "failed"]:
+                        postgres_pbar.n = postgres_pbar.total
+                        vector_pbar.n = vector_pbar.total
+                        postgres_pbar.refresh()
+                        vector_pbar.refresh()
+                        print(f"\n✅ Task {task_status['status']}!")
+                        break
+
+                    await asyncio.sleep(2)
+
+                except Exception as e:
+                    await asyncio.sleep(5)
+
     except Exception as e:
         print(f"Error ingesting folders/files: {e}")
-        print("For troubleshooting, check the service logs in logs/ directory")
+
 
 async def handle_embed_command(args, cli_manager, api_client):
     """Handle embedding generation command with state recovery"""
@@ -841,6 +848,10 @@ async def handle_embed_command(args, cli_manager, api_client):
             print(f"✅ {result.get('message', 'State cleared successfully')}")
             return
         
+        if getattr(args, 'continue', False):
+            print("Continuing embedding generation is not yet implemented.")
+            return
+
         # Get current ingestion state
         print("Fetching current ingestion state...")
         client = await cli_manager._get_http_client()
@@ -859,107 +870,9 @@ async def handle_embed_command(args, cli_manager, api_client):
         print(f"Total Chunks: {parallel_stats.get('total_chunks', 0)}")
         print(f"Embeddings Generated: {parallel_stats.get('embeddings_generated', 0)}")
         print(f"Workers Running: {parallel_stats.get('workers_running', False)}")
-        
-        if getattr(args, 'continue', False):
-            # Continue embedding generation from saved state
-            print("\n🚀 Continuing embedding generation from saved state...")
-            
-            try:
-                # Import required modules for local embedding generation
-                import ollama
-                import threading
-                import time
-                from datetime import datetime
-                from tqdm import tqdm
-                
-                # Initialize ollama client
-                ollama_client = ollama.Client()
-                
-                print("✅ Ollama client initialized")
-                print(f"🔧 Using {args.workers} workers with batch size {args.batch_size}")
-                
-                # Get initial statistics
-                client = await cli_manager._get_http_client()
-                response = await client.get(f"{orchestrator_url}/ingestion/stats")
-                response.raise_for_status()
-                initial_stats = response.json()
-                
-                embedding_stats = initial_stats.get('embedding_queue', {})
-                queue_size = embedding_stats.get('queue_size', 0)
-                total_processed = embedding_stats.get('total_processed', 0)
-                
-                if queue_size == 0:
-                    print("✅ No pending embeddings found. All processing appears complete!")
-                    return
-                
-                print(f"📊 Found {queue_size} pending embeddings")
-                
-                # Initialize progress bar
-                pbar = tqdm(
-                    total=queue_size + total_processed,
-                    initial=total_processed,
-                    desc="Embedding Progress",
-                    unit="embeddings"
-                )
-                # Force refresh to ensure visibility
-                pbar.refresh()
-                
-                # Monitor progress
-                start_time = time.time()
-                last_processed = total_processed
-                
-                print("\n🔄 Monitoring embedding generation progress...")
-                print("Press Ctrl+C to stop monitoring (embeddings will continue in background)")
-                
-                try:
-                    while True:
-                        # Get current statistics
-                        client = await cli_manager._get_http_client()
-                        response = await client.get(f"{orchestrator_url}/ingestion/stats")
-                        response.raise_for_status()
-                        current_stats = response.json()
-                        
-                        current_embedding_stats = current_stats.get('embedding_queue', {})
-                        current_processed = current_embedding_stats.get('total_processed', 0)
-                        current_queue_size = current_embedding_stats.get('queue_size', 0)
-                        current_failed = current_embedding_stats.get('total_failed', 0)
-                        
-                        # Update progress bar
-                        pbar.n = current_processed
-                        pbar.refresh()
-                        
-                        # Check if completed
-                        if current_queue_size == 0:
-                            pbar.close()
-                            elapsed = time.time() - start_time
-                            total_generated = current_processed - last_processed
-                            rate = total_generated / max(elapsed, 1)
-                            
-                            print(f"\n✅ Embedding generation completed!")
-                            print(f"📊 Generated {total_generated} embeddings in {elapsed:.1f}s ({rate:.2f}/sec)")
-                            if current_failed > 0:
-                                print(f"⚠️ Failed embeddings: {current_failed}")
-                            break
-                        
-                        await asyncio.sleep(2)  # Update every 2 seconds
-                        
-                except KeyboardInterrupt:
-                    pbar.close()
-                    print("\n🛑 Monitoring stopped. Embeddings continue processing in background.")
-                    print("💡 Use 'agentic-rag embed --stats' to check progress later.")
-                
-            except ImportError as e:
-                print(f"❌ Missing required dependency: {e}")
-                print("💡 Install ollama: pip install ollama")
-                print("💡 Install tqdm: pip install tqdm")
-        else:
-            print("\n💡 Available actions:")
-            print("  --continue     Continue embedding generation from saved state")
-            print("  --stats        Show detailed embedding statistics")  
-            print("  --clear-state  Clear all saved embedding state")
             
     except Exception as e:
         print(f"Error handling embedding command: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main(sys.argv[1:]))

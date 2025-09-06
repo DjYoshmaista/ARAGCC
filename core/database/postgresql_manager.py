@@ -1,12 +1,18 @@
 """
 PostgreSQL database manager for the AgenticRAG system.
+
+Provides thread-safe PostgreSQL operations with proper connection pooling,
+error handling, and rate limiting for document and chunk storage.
 """
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from typing import List, Dict, Any, Optional
+from psycopg2.pool import SimpleConnectionPool
+from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
 import logging
+import contextlib
+from dataclasses import asdict
 
 from shared.utils.rate_limiter import rate_limiter, RateLimit
 from .schemas import DocumentMetadata, ChunkMetadata
@@ -14,48 +20,115 @@ from .schemas import DocumentMetadata, ChunkMetadata
 logger = logging.getLogger(__name__)
 
 class PostgreSQLManager:
-    """Manages PostgreSQL database operations"""
+    """
+    Manages PostgreSQL database operations with connection pooling and rate limiting.
+    
+    Provides thread-safe database operations for document and chunk storage
+    with automatic connection management, error handling, and performance optimization.
+    """
     
     def __init__(self, config: Dict[str, Any]):
+        """
+        Initialize PostgreSQL manager with configuration.
+        
+        Args:
+            config: Database configuration containing host, port, database,
+                   username, password, and optional connection pool settings
+        """
         self.config = config
         self.connection = None
+        self.connection_pool: Optional[SimpleConnectionPool] = None
+        self._pool_min_conn = config.get('pool_min_conn', 1)
+        self._pool_max_conn = config.get('pool_max_conn', 10)
         
         # Set rate limits - PostgreSQL: 100 requests per second, burst of 20
         rate_limiter.set_rate_limit("postgresql", RateLimit(requests_per_second=100.0, burst_limit=20))
     
     def connect(self) -> bool:
-        """Establish connection to PostgreSQL"""
+        """
+        Establish connection to PostgreSQL with connection pooling support.
+        
+        Returns:
+            True if connection successful, False otherwise
+        """
         try:
-            self.connection = psycopg2.connect(
-                host=self.config['host'],
-                port=self.config['port'],
-                database=self.config['database'],
-                user=self.config['username'],
-                password=self.config['password']
-            )
-            logger.info("Successfully connected to PostgreSQL")
+            if self.config.get('use_connection_pool', True):
+                # Initialize connection pool
+                self.connection_pool = SimpleConnectionPool(
+                    self._pool_min_conn,
+                    self._pool_max_conn,
+                    host=self.config['host'],
+                    port=self.config['port'],
+                    database=self.config['database'],
+                    user=self.config['username'],
+                    password=self.config['password']
+                )
+                logger.info(f"Successfully created PostgreSQL connection pool "
+                           f"(min={self._pool_min_conn}, max={self._pool_max_conn})")
+            else:
+                # Single connection
+                self.connection = psycopg2.connect(
+                    host=self.config['host'],
+                    port=self.config['port'],
+                    database=self.config['database'],
+                    user=self.config['username'],
+                    password=self.config['password']
+                )
+                logger.info("Successfully connected to PostgreSQL")
             return True
         except Exception as e:
             logger.error(f"Failed to connect to PostgreSQL: {e}")
             return False
     
     def disconnect(self):
-        """Close PostgreSQL connection"""
+        """Close PostgreSQL connections and clean up resources"""
+        if self.connection_pool:
+            self.connection_pool.closeall()
+            self.connection_pool = None
+            logger.info("Closed PostgreSQL connection pool")
+        
         if self.connection:
             self.connection.close()
             self.connection = None
             logger.info("Disconnected from PostgreSQL")
     
-    def initialize_schema(self) -> bool:
-        """Initialize database schema for document and chunk storage"""
-        if not self.connection:
-            if not self.connect():
-                return False
+    @contextlib.contextmanager
+    def get_connection(self):
+        """
+        Context manager to get a database connection.
         
+        Uses connection pool if available, otherwise uses single connection.
+        Handles connection cleanup automatically.
+        """
+        connection = None
         try:
-            with self.connection.cursor() as cursor:
-                # Create documents table
-                cursor.execute("""
+            if self.connection_pool:
+                connection = self.connection_pool.getconn()
+            else:
+                if not self.connection:
+                    if not self.connect():
+                        raise psycopg2.Error("Failed to establish database connection")
+                connection = self.connection
+            
+            yield connection
+        finally:
+            if self.connection_pool and connection:
+                self.connection_pool.putconn(connection)
+    
+    def initialize_schema(self) -> bool:
+        """
+        Initialize database schema for document and chunk storage.
+        
+        Creates tables and indexes if they don't exist.
+        
+        Returns:
+            True if schema initialization successful, False otherwise
+        """
+        try:
+            with self.get_connection() as connection:
+                with connection.cursor() as cursor:
+                    # Create documents table
+                    cursor.execute("""
                     CREATE TABLE IF NOT EXISTS documents (
                         id VARCHAR(255) PRIMARY KEY,
                         file_path TEXT NOT NULL,
@@ -67,141 +140,148 @@ class PostgreSQLManager:
                         total_chunks INTEGER NOT NULL DEFAULT 0
                     )
                 """)
-                
-                # Create chunks table
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS chunks (
-                        id VARCHAR(255) PRIMARY KEY,
-                        document_id VARCHAR(255) NOT NULL REFERENCES documents(id),
-                        chunk_number INTEGER NOT NULL,
-                        chunk_text TEXT NOT NULL,
-                        token_count INTEGER NOT NULL,
-                        overlap_tokens INTEGER NOT NULL DEFAULT 0,
-                        previous_chunk_id VARCHAR(255),
-                        next_chunk_id VARCHAR(255),
-                        created_at TIMESTAMP NOT NULL
-                    )
-                """)
-                
-                # Create indexes for better performance
-                cursor.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_chunks_document_id 
-                    ON chunks(document_id)
-                """)
-                
-                cursor.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_chunks_chunk_number 
-                    ON chunks(chunk_number)
-                """)
-                
-                cursor.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_documents_file_path 
-                    ON documents(file_path)
-                """)
-                
-                self.connection.commit()
-                logger.info("Database schema initialized successfully")
-                return True
+                    
+                    # Create chunks table
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS chunks (
+                            id VARCHAR(255) PRIMARY KEY,
+                            document_id VARCHAR(255) NOT NULL REFERENCES documents(id),
+                            chunk_number INTEGER NOT NULL,
+                            chunk_text TEXT NOT NULL,
+                            token_count INTEGER NOT NULL,
+                            overlap_tokens INTEGER NOT NULL DEFAULT 0,
+                            previous_chunk_id VARCHAR(255),
+                            next_chunk_id VARCHAR(255),
+                            created_at TIMESTAMP NOT NULL
+                        )
+                    """)
+                    
+                    # Create indexes for better performance
+                    cursor.execute("""
+                        CREATE INDEX IF NOT EXISTS idx_chunks_document_id 
+                        ON chunks(document_id)
+                    """)
+                    
+                    cursor.execute("""
+                        CREATE INDEX IF NOT EXISTS idx_chunks_chunk_number 
+                        ON chunks(chunk_number)
+                    """)
+                    
+                    cursor.execute("""
+                        CREATE INDEX IF NOT EXISTS idx_documents_file_path 
+                        ON documents(file_path)
+                    """)
+                    
+                    connection.commit()
+                    logger.info("Database schema initialized successfully")
+                    return True
         except Exception as e:
             logger.error(f"Failed to initialize schema: {e}")
-            if self.connection:
-                self.connection.rollback()
             return False
     
     async def store_document_async(self, document: DocumentMetadata) -> bool:
-        """Store document metadata asynchronously with rate limiting"""
-        if not self.connection:
-            if not self.connect():
-                return False
+        """
+        Store document metadata asynchronously with rate limiting.
         
+        Args:
+            document: Document metadata to store
+            
+        Returns:
+            True if storage successful, False otherwise
+        """
         try:
             # Apply rate limiting
             await rate_limiter.acquire("postgresql")
             
-            with self.connection.cursor() as cursor:
-                cursor.execute("""
-                    INSERT INTO documents (
-                        id, file_path, file_name, folder_path, 
-                        file_size, created_at, updated_at, total_chunks
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (id) DO UPDATE SET
-                        updated_at = EXCLUDED.updated_at,
-                        total_chunks = EXCLUDED.total_chunks
-                """, (
-                    document.id, document.file_path, document.file_name,
-                    document.folder_path, document.file_size,
-                    document.created_at, document.updated_at, document.total_chunks
-                ))
-                
-                self.connection.commit()
-                logger.debug(f"Stored document: {document.id}")
-                return True
+            with self.get_connection() as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        INSERT INTO documents (
+                            id, file_path, file_name, folder_path, 
+                            file_size, created_at, updated_at, total_chunks
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO UPDATE SET
+                            updated_at = EXCLUDED.updated_at,
+                            total_chunks = EXCLUDED.total_chunks
+                    """, (
+                        document.id, document.file_path, document.file_name,
+                        document.folder_path, document.file_size,
+                        document.created_at, document.updated_at, document.total_chunks
+                    ))
+                    
+                    connection.commit()
+                    logger.debug(f"Stored document: {document.id}")
+                    return True
         except Exception as e:
             logger.error(f"Failed to store document {document.id}: {e}")
-            if self.connection:
-                self.connection.rollback()
             return False
     
     def store_document(self, document: DocumentMetadata) -> bool:
-        """Store document metadata synchronously"""
-        if not self.connection:
-            if not self.connect():
-                return False
+        """
+        Store document metadata synchronously.
         
+        Args:
+            document: Document metadata to store
+            
+        Returns:
+            True if storage successful, False otherwise
+        """
         try:
-            with self.connection.cursor() as cursor:
-                cursor.execute("""
-                    INSERT INTO documents (
-                        id, file_path, file_name, folder_path, 
-                        file_size, created_at, updated_at, total_chunks
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (id) DO UPDATE SET
-                        updated_at = EXCLUDED.updated_at,
-                        total_chunks = EXCLUDED.total_chunks
-                """, (
-                    document.id, document.file_path, document.file_name,
-                    document.folder_path, document.file_size,
-                    document.created_at, document.updated_at, document.total_chunks
-                ))
-                
-                self.connection.commit()
-                logger.debug(f"Stored document: {document.id}")
-                return True
+            with self.get_connection() as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        INSERT INTO documents (
+                            id, file_path, file_name, folder_path, 
+                            file_size, created_at, updated_at, total_chunks
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO UPDATE SET
+                            updated_at = EXCLUDED.updated_at,
+                            total_chunks = EXCLUDED.total_chunks
+                    """, (
+                        document.id, document.file_path, document.file_name,
+                        document.folder_path, document.file_size,
+                        document.created_at, document.updated_at, document.total_chunks
+                    ))
+                    
+                    connection.commit()
+                    logger.debug(f"Stored document: {document.id}")
+                    return True
         except Exception as e:
             logger.error(f"Failed to store document {document.id}: {e}")
-            if self.connection:
-                self.connection.rollback()
             return False
     
     def store_chunk(self, chunk: ChunkMetadata) -> bool:
-        """Store chunk metadata"""
-        if not self.connection:
-            if not self.connect():
-                return False
+        """
+        Store chunk metadata.
         
+        Args:
+            chunk: Chunk metadata to store
+            
+        Returns:
+            True if storage successful, False otherwise
+        """
         try:
-            with self.connection.cursor() as cursor:
-                cursor.execute("""
-                    INSERT INTO chunks (
-                        id, document_id, chunk_number, chunk_text,
-                        token_count, overlap_tokens, previous_chunk_id, next_chunk_id, created_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (id) DO UPDATE SET
-                        chunk_text = EXCLUDED.chunk_text,
-                        token_count = EXCLUDED.token_count
-                """, (
-                    chunk.id, chunk.document_id, chunk.chunk_number, chunk.chunk_text,
-                    chunk.token_count, chunk.overlap_tokens, 
-                    chunk.previous_chunk_id, chunk.next_chunk_id, chunk.created_at
-                ))
-                
-                self.connection.commit()
-                logger.debug(f"Stored chunk: {chunk.id}")
-                return True
+            with self.get_connection() as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        INSERT INTO chunks (
+                            id, document_id, chunk_number, chunk_text,
+                            token_count, overlap_tokens, previous_chunk_id, next_chunk_id, created_at
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO UPDATE SET
+                            chunk_text = EXCLUDED.chunk_text,
+                            token_count = EXCLUDED.token_count
+                    """, (
+                        chunk.id, chunk.document_id, chunk.chunk_number, chunk.chunk_text,
+                        chunk.token_count, chunk.overlap_tokens, 
+                        chunk.previous_chunk_id, chunk.next_chunk_id, chunk.created_at
+                    ))
+                    
+                    connection.commit()
+                    logger.debug(f"Stored chunk: {chunk.id}")
+                    return True
         except Exception as e:
             logger.error(f"Failed to store chunk {chunk.id}: {e}")
-            if self.connection:
-                self.connection.rollback()
             return False
     
     def store_chunks_batch(self, chunks: List[ChunkMetadata]) -> int:

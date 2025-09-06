@@ -1,21 +1,25 @@
 """
-Model Gateway for AgenticRAG system
-Provides interface to Ollama models with rate limiting
+Advanced Model Gateway for AgenticRAG System
+
+Provides high-performance interface to Ollama models with load balancing,
+rate limiting, health monitoring, and comprehensive error handling.
 """
 
 import asyncio
 import json
-from typing import Dict, List, Optional, AsyncGenerator, Any
-from dataclasses import dataclass, asdict
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from typing import Dict, List, Optional, AsyncGenerator, Any, Union
+from dataclasses import dataclass, asdict, field
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import uvicorn
 import logging
 import os
-from pydantic import BaseModel
-from datetime import datetime, timezone
+from pydantic import BaseModel, Field, validator
+from datetime import datetime, timezone, timedelta
 import time
+from contextlib import asynccontextmanager
 
 logger = logging.getLogger("model_gateway")
 
@@ -89,30 +93,77 @@ class ModelInfo:
     loaded: bool = False
 
 class InferenceRequest(BaseModel):
-    model: str
-    prompt: str
-    stream: bool = False
-    parameters: Dict[str, Any] = {}
+    """Request model for text generation"""
+    model: str = Field(..., description="Model name to use for inference")
+    prompt: str = Field(..., min_length=1, description="Input prompt for generation")
+    stream: bool = Field(False, description="Whether to stream response")
+    parameters: Dict[str, Any] = Field(default_factory=dict, description="Model parameters")
+    
+    @validator('model')
+    def validate_model(cls, v):
+        if not v or not isinstance(v, str):
+            raise ValueError('Model name must be a non-empty string')
+        return v.strip()
+    
+    @validator('prompt')
+    def validate_prompt(cls, v):
+        if not v or not isinstance(v, str):
+            raise ValueError('Prompt must be a non-empty string')
+        return v
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "model": "qwen3:8b",
+                "prompt": "What is artificial intelligence?",
+                "stream": False,
+                "parameters": {
+                    "temperature": 0.7,
+                    "top_p": 0.9,
+                    "max_tokens": 2048
+                }
+            }
+        }
 
 class InferenceResponse(BaseModel):
-    response: str
-    done: bool
-    context: Optional[List[int]] = None
-    total_duration: Optional[int] = None
-    load_duration: Optional[int] = None
-    prompt_eval_count: Optional[int] = None
-    prompt_eval_duration: Optional[int] = None
-    eval_count: Optional[int] = None
-    eval_duration: Optional[int] = None
+    """Response model for text generation"""
+    response: str = Field(..., description="Generated text response")
+    done: bool = Field(True, description="Whether generation is complete")
+    context: Optional[List[int]] = Field(None, description="Context tokens")
+    total_duration: Optional[int] = Field(None, description="Total processing time in nanoseconds")
+    load_duration: Optional[int] = Field(None, description="Model loading time in nanoseconds")
+    prompt_eval_count: Optional[int] = Field(None, description="Number of prompt tokens")
+    prompt_eval_duration: Optional[int] = Field(None, description="Prompt evaluation time")
+    eval_count: Optional[int] = Field(None, description="Number of generated tokens")
+    eval_duration: Optional[int] = Field(None, description="Generation time")
+    model_info: Optional[Dict[str, Any]] = Field(None, description="Model metadata")
 
 class EmbeddingRequest(BaseModel):
-    model: str = "dengcao/Qwen3-Embedding-0.6B:Q8_0"
-    prompt: str
+    """Request model for embedding generation"""
+    model: str = Field(default="dengcao/Qwen3-Embedding-0.6B:Q8_0", description="Embedding model name")
+    prompt: str = Field(..., min_length=1, description="Text to embed")
+    
+    @validator('prompt')
+    def validate_prompt(cls, v):
+        if not v or not isinstance(v, str):
+            raise ValueError('Prompt must be a non-empty string')
+        return v.strip()
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "model": "dengcao/Qwen3-Embedding-0.6B:Q8_0",
+                "prompt": "The quick brown fox jumps over the lazy dog."
+            }
+        }
 
 class EmbeddingResponse(BaseModel):
-    embedding: List[float]
-    total_duration: Optional[int] = None
-    load_duration: Optional[int] = None
+    """Response model for embedding generation"""
+    embedding: List[float] = Field(..., description="Generated embedding vector")
+    dimensions: int = Field(..., description="Embedding dimensions")
+    total_duration: Optional[int] = Field(None, description="Total processing time")
+    load_duration: Optional[int] = Field(None, description="Model loading time")
+    model_info: Optional[Dict[str, Any]] = Field(None, description="Model metadata")
 
 class ModelGateway:
     def __init__(self, ollama_url: str = "http://localhost:11434"):

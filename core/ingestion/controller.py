@@ -403,6 +403,8 @@ class ParallelIngestionController:
                     file_start = time.time()
                     with open(job.file_path, 'r', encoding='utf-8', errors='ignore') as f:
                         content = f.read()
+                    # Sanitize content to remove null bytes
+                    content = content.replace('\x00', '')
                     file_read_time = time.time() - file_start
                 
                 if not content.strip():
@@ -666,61 +668,33 @@ class ParallelIngestionController:
         self.logger.info("Checkpoint worker stopped")
     
     def _wait_for_completion(self):
-        """Wait for all processing to complete with timeout"""
-        self.logger.info("Waiting for processing to complete...")
+        """Wait for all processing to complete with decoupled file and embedding waits."""
+        self.logger.info("Waiting for file processing to complete...")
         
-        timeout = self.config.get('file_processing_timeout', 1800)  # 30 minute timeout for file processing
-        start_time = time.time()
-        
-        # Wait for file queue to empty
-        while not self.file_queue.empty():
-            # Check for timeout
-            if time.time() - start_time > timeout:
-                self.logger.warning("File processing timeout reached")
-                break
-            time.sleep(1.0)
-            self._log_progress()
-            
-            # Also check completion status
-            with self.state_lock:
-                files_completed = self.state.processed_files + self.state.failed_files + self.state.skipped_files
-                if files_completed >= self.state.total_files:
-                    break
-        
-        self.logger.info("File processing completed, waiting for embeddings...")
-        
-        # Wait for embeddings to complete - increased timeout for large datasets
-        embedding_timeout = self.config.get('embedding_timeout', 1800)  # 30 minutes default timeout for embeddings
-        embedding_start = time.time()
+        # Wait for all files to be queued and processed
+        self.file_queue.join()
+        self.logger.info("All files have been processed, now waiting for embeddings.")
+
+        # Now, wait for the embedding queue to be fully processed
+        embedding_timeout = self.config.get('embedding_timeout', 3600)  # Default to 1 hour
+        embedding_start_time = time.time()
         
         while True:
             with self.state_lock:
-                embeddings_generated = self.state.embeddings_generated
                 total_chunks = self.state.total_chunks
-                
-            # Check completion
+                embeddings_generated = self.state.embeddings_generated
+            
             if embeddings_generated >= total_chunks:
+                self.logger.info("All embeddings have been generated.")
                 break
-                
-            if time.time() - embedding_start > embedding_timeout:
-                self.logger.warning("Embedding processing timeout reached")
+
+            if time.time() - embedding_start_time > embedding_timeout:
+                self.logger.warning(f"Embedding processing timeout of {embedding_timeout}s reached.")
                 break
-            
-            # Check if embedding queue is stuck (no progress for 10 seconds)
-            if hasattr(self, '_last_embedding_count'):
-                if embeddings_generated == self._last_embedding_count:
-                    if time.time() - self._last_embedding_check > 10:
-                        self.logger.warning("Embedding queue appears stuck, proceeding...")
-                        break
-                else:
-                    self._last_embedding_check = time.time()
-            else:
-                self._last_embedding_check = time.time()
-            
-            self._last_embedding_count = embeddings_generated
-            
-            time.sleep(1.0)
+
+            # Log progress periodically
             self._log_progress()
+            time.sleep(5)
         
         self.logger.info("All processing completed")
     
