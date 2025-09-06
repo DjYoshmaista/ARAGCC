@@ -40,4 +40,5 @@ __pycache__/
 *.md
 **.md
 **.db
-**.sql
+**.sqlservices/orchestrator/logs/*.log
+services/model-gateway/logs/*.log
